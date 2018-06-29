@@ -2172,6 +2172,7 @@ public:
 								consistent_in_next_cluster.first  = nextClusterID;//the cluster id of the next one
 								consistent_in_next_cluster.second.push_back(k);
 								cout<<"displayCov diagnal: "<<endl<<displayCov<<endl;
+								int backdd =0;
 							}
 
 						}	
