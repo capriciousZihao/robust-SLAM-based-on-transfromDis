@@ -734,8 +734,8 @@ public:
 		std::array<double,2> tem_dis, p_value;
 		std::array<double,6> fullLoopInfo;//six elements:start ID,X,Y,end ID,X,Y
 		std::map<std::pair<int, int>, std::pair<g2o::SE2, Matrix3d> >	LP_Trans_Covar_Map;	
-
-		collect_vertex(filename, LC_Inf, LP_Trans_Covar_Map);
+		//LC_Inf is a map, from nodes pair of loop closure to the six element array of 
+		collect_vertexAndLP(filename, LC_Inf, LP_Trans_Covar_Map);
 
 		if(loops.empty())
 		{
@@ -1279,7 +1279,7 @@ public:
 	
 // 	 */
 
-	int collect_vertex(const char* filename, std::map<std::pair<int, int>, std::map<std::pair<int, int>, std::array<double,6>> &LC_Inf,
+	int collect_vertexAndLP(const char* filename, std::map<std::pair<int, int>, std::map<std::pair<int, int>, std::array<double,6>> &LC_Inf,
 		std::pair<g2o::SE2, Matrix3d> >	&LP_Trans_Covar_Map)
 	{
 
@@ -1464,12 +1464,12 @@ public:
 		    		cout<<"OdoInf[i][0]: "<<OdoInf[i][0]<<" OdoInf[i][1]: "<<OdoInf[i][1]<<endl;
 		    		cout<<"i: "<<i<<endl;
 			    	printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-					// exit(0);
+					exit(0);
 		    	}
 		    	else if(OdoInf[i][0] != i)
 		    	{
 			    	printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-					// exit(0);	
+					exit(0);	
 		    	}
 		    	// cout<<OdoInf[i][0]<<" "<<OdoInf[i][1]<<" "<<OdoInf[i][2]<<" "<<OdoInf[i][3]<<" "<<OdoInf[i][4]<<" "
 		    	// 	<<OdoInf[i][5]<<" "<<OdoInf[i][6]<<" "<<OdoInf[i][7]<<endl;
@@ -1663,6 +1663,62 @@ public:
 			transSequence_whole.push_back(transSequence_l); //all clusters level
 		}
 		// exit(0);
+	}
+	//input: the start and end node serial number correspond to the segment you want to synthesize
+	//output: the tranform and covariance info of the synthesized segment, in Trans and cov
+	void synthesize_odo_edges(int start, int end, std::vector<std::array<double,8>> & OdoInf, g2o::SE2 & Trans, Matrix3d & cov)
+	{
+		std::array<double,8> startNodeInfo = OdoInf[start];
+		std::array<double,3>  mid_vector3;
+		Matrix3d m_m, m2, J1, J2;
+		g2o::SE2 edge2;
+		int lengthNode = end -start;
+		if(startNodeInfo[0] != start){
+			printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
+			exit(0);
+		}
+		if(lengthNode < 0){
+			printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
+			exit(0);
+		}
+		cov = Matrix3d::Identity(); 
+		else if(lengthNode == 0){
+			cov(0,0)= 0; cov(1,1)= 0; cov(2,2) = 0;
+			mid_vector3[0] = 0;mid_vector3[1] = 0;mid_vector3[2] = 0;
+			Trans.fromVector(mid_vector3);
+		}
+		else
+		{
+			if(lengthNode == 1 and (startNodeInfo[1] != end))
+			{
+				printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
+				exit(0);
+			}			
+			cov(0,0)= 1.0/startNodeInfo[5]; cov(1,1)= 1.0/startNodeInfo[6]; cov(2,2) = 1.0/startNodeInfo[7];
+			mid_vector3[0] = startNodeInfo[2];
+			mid_vector3[1] = startNodeInfo[3];
+			mid_vector3[2] = startNodeInfo[4];
+			Trans.fromVector(mid_vector3);
+			int j=start;
+			for(j=start+1; j<end; j++)
+			{
+				m2 = Matrix3d::Identity();
+				m2(0,0 ) = 1.0/OdoInf[j][5]; m2(1,1) = 1.0/OdoInf[j][6]; m2(2,2) = 1.0/OdoInf[j][7];
+				mid_vector3[0] = OdoInf[j][2]; mid_vector3[1] = OdoInf[j][3]; mid_vector3[2] = OdoInf[j][4];
+				edge2.fromVector(mid_vector3);
+
+				Jacobian_4_edge_propagate(Trans, edge2, J1, J2);
+				covariance_propagate(cov, m2, J1, J2, m_m);
+				cov = m_m;
+
+				Trans *= edge2;//update transform
+			}
+			if(OdoInf[j-1] != end)
+			{
+				printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
+				exit(0);
+			}
+		}
 	}
 
 	void Jacobian_4_edge_propagate(g2o::SE2 & TransA, g2o::SE2 & TransB, Matrix3d & J1, Matrix3d & J2)
