@@ -39,7 +39,7 @@ struct cluster
 
 	cluster(): startLow(-1), startHigh(-1), endLow(-1), endHigh(-1), size(0) {}
 	cluster(int start, int end, int idofcluster) : startLow(start), startHigh(start), endLow(end), endHigh(end), size(1), id_cluster(idofcluster){}
-
+/*
 	bool contains(int start, int end, int threshold)
 	{
 		return
@@ -51,7 +51,7 @@ struct cluster
 					std::abs(end-endHigh) < threshold or std::abs(end-endLow) < threshold
 				);
 
-	}
+	}*/
 
 	//return  the ID of nearest LC and the distance
 	std::array<double,2> cal_distance( std::array<double,6> LoopPosition)
@@ -2004,7 +2004,8 @@ public:
 		}
 
 	}
-
+//input is four pair<transform, covariance> of two loop and two odo edge segments
+//return is one pair<pass_check_or_not, transfrom_distance>
 	std::pair<bool, double> check_single_loop_inter(std::array<std::pair<g2o::SE2, Matrix3d>, 4 > &transSequence_cluster_inter)//, double& statis
 	{
 		g2o::SE2 loop1, loop2, Edge_midd;
@@ -2173,6 +2174,8 @@ public:
 								consistent_in_next_cluster.second.push_back(k);
 								cout<<"displayCov diagnal: "<<endl<<displayCov<<endl;
 								int backdd =0;
+
+								int dsfdd=0;
 							}
 
 						}	
@@ -2316,7 +2319,8 @@ public:
 
 
 
-
+	// nodes store the starts and ends node of the two loops, [loop1_start, loop1_end, loop2_start, loop2_end]
+	// transSequence returns the gransform and the covariance of the two segments of odometry edges
 	void cal_odo_seg(std::array<int,4> &nodes, std::array<std::pair<g2o::SE2, Matrix3d>, 2 > &transSequence)
 	{
 		g2o::SE2 edge1, edge2, edge0;
