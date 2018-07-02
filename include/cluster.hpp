@@ -732,9 +732,10 @@ public:
 		bool findStartVertexInMatrix=false,findEndVertexInMatrix=false, ready2chiTest=false;
 		std::array<double,3> startPosition, endPosition, nearest_cluster;
 		std::array<double,2> tem_dis, p_value;
-		std::array<double,6> fullLoopInfo;//six elements:start ID,X,Y,end ID,X,Y		
+		std::array<double,6> fullLoopInfo;//six elements:start ID,X,Y,end ID,X,Y
+		std::map<std::pair<int, int>, std::pair<g2o::SE2, Matrix3d> >	LP_Trans_Covar_Map;	
 
-		collect_vertex(filename);
+		collect_vertex(filename, LC_Inf, LP_Trans_Covar_Map);
 
 		if(loops.empty())
 		{
@@ -744,16 +745,25 @@ public:
 		_clustersFound.clear();
 		for(IntPairSet::const_iterator it = loops.begin(), lend = loops.end();it!=lend;it++)
 		{
-			int start 	= std::max(it->first,it->second);
-			int end 	= std::min(it->first,it->second);
 
+			int start 	= it->first;
+			int end 	= it->second;
+			if(start<end)
+			{
+				printf("This error about start node and end node is in %s on line %d\n",  __FILE__, __LINE__);
+				exit(0);
+			}
+			//get loop closure vextexes position
+			fullLoopInfo = get_LC_Pos( start,  end);
+			//construct the transfrom and covariance of this
 
+			LP_Trans_Covar_Map[it] = 
 
 			//print loop number and cluster id of the loop
 			num_loop++;
 			// cout<<"loop "<<num_loop<<" "<<start<<" "<<end<<endl;
 
-			fullLoopInfo = get_LC_Pos( start,  end);//get loop closure vextexes position
+
 
 
 			if(_clustersFound.empty())
@@ -1269,7 +1279,8 @@ public:
 	
 // 	 */
 
-	int collect_vertex(const char* filename)
+	int collect_vertex(const char* filename, std::map<std::pair<int, int>, std::map<std::pair<int, int>, std::array<double,6>> &LC_Inf,
+		std::pair<g2o::SE2, Matrix3d> >	&LP_Trans_Covar_Map)
 	{
 
 		ifstream fileStream;  
@@ -1280,6 +1291,7 @@ public:
 	    std::array<double,11> savemid;
 	    std::array<double,6> lcedge_element;
 	    std::pair<int, int>  lc_vertex_pair;
+	    std::pair<g2o::SE2, Matrix3d> ele_lp_trans_covar;
 	    // char* seg;
 	    int count = 0,dddlndgsfdgj=0;// 行数计数器  
 	    int position = 0, position2 = 0;  
@@ -1411,7 +1423,24 @@ public:
 			    			LC_Inf[lc_vertex_pair] = lcedge_element;
 				    		cout<<lc_vertex_pair.first<<" "<<lc_vertex_pair.second<<" "<<lcedge_element[0]<<" "
 				    			<<lcedge_element[1]<<" "<<lcedge_element[2]<<" "<<lcedge_element[3]<<" "<<lcedge_element[4]<<" "
-			    				<<lcedge_element[5]<<endl;		
+			    				<<lcedge_element[5]<<endl;	
+
+							Matrix3d m1 = Matrix3d::Identity();
+							std::array<double, 3> mid_vector3;
+							m1(0,0 )= 1.0/loop_edge[3]; 
+							m1(1,1)= 1.0/loop_edge[4]; 
+							m1(2,2) = 1.0/loop_edge[5];
+
+							mid_vector3[0] = loop_edge[0];
+							mid_vector3[1] = loop_edge[1];
+							mid_vector3[2] = loop_edge[2];
+							g2o::SE2 edge1.fromVector(mid_vector3);
+
+							ele_lp_trans_covar.first  = edge1;
+							ele_lp_trans_covar.second = m1;
+
+							LP_Trans_Covar_Map[lc_vertex_pair] = ele_lp_trans_covar;
+
 			    			if(lc_vertex_pair.first <lc_vertex_pair.second){
 			    				printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
 								exit(0);
