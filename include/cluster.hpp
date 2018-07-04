@@ -40,182 +40,6 @@ struct cluster
 	cluster(): startLow(-1), startHigh(-1), endLow(-1), endHigh(-1), size(0) {}
 	cluster(int start, int end, int idofcluster) : startLow(start), startHigh(start), endLow(end), endHigh(end), size(1), id_cluster(idofcluster){}
 
-
-	//return  the ID of nearest LC and the distance
-
-	int  update_distance(int idnearest, double distance)
-	{
-		std::array<double,6> lastLI;
-		double startDIS,endDIS;
-		std::array<double,2> ret;
-		//there should be element in positionserial, if no, it is abnormal,so exit
-		if(positionserial.size() < 1)
-		{
-			printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-			exit(0);
-		}
-		//check if idnearest is within the size of dis_new_LC 
-		if(dis_new_LC.size() < idnearest)
-		{
-			printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-			exit(0);
-		}
-		//check if the numbers of elements in posserial\dis_cluster\dis_new_lc are consistent 
-		if(dis_new_LC.size() != positionserial.size())
-		{
-			printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-			exit(0);
-		}
-		if(dis_cluster_start_end.size() != positionserial.size()-1)
-		{
-			cout<<"dis_cluster_start_end size does not equal to positionserial"<<endl;
-			cout<<"dis_cluster_start_end.size:"<<dis_cluster_start_end.size()<<endl;
-			cout<<"positionserial.size:"<<positionserial.size()<<endl;	
-			cout<<"id of current cluster: "<<id_cluster<<endl;	
-			printf("This error is in %s on line %d\n",  __FILE__, __LINE__);	
-			exit(0);
-		}
-		//make sure the direct and indirect reference of nearest distance is identical
-		if(dis_new_LC[idnearest] != distance)
-		{
-			cout<<"new distance serial disorder!"<<endl;
-			cout<<"id of current cluster: "<<id_cluster<<endl;
-			printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-			exit(0);
-		}
-		//clear the backup dis vector
-		dis_cluster_backup.clear();
-		//if no element in dis_cluster_start_end, save the distance to it and exit
-		if(dis_cluster_start_end.size() == 0)
-		{
-			if(positionserial.size() != 1)
-			{
-				printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
-				exit(0);
-			}
-			dis_cluster_backup.push_back(distance);
-			return 1;
-		}
-		//copy dis_cluster_start_end to dis_cluster_backup
-		dis_cluster_backup.assign(dis_cluster_start_end.begin(), dis_cluster_start_end.end());  
-
-		//insert the distance into dis_cluster_backup
-		if(idnearest == 0)//if the nearest lc is the start lc
-		{
-			// if(dis_new_LC.size() == 1)
-			// 	return 
-			if(dis_cluster_backup[0]<=dis_new_LC[idnearest+1])//instert to the first place
-			{
-				dis_cluster_backup.insert(dis_cluster_backup.begin(),dis_new_LC[idnearest]);
-				return 0;
-			}
-			else
-			{
-				dis_cluster_backup.insert(dis_cluster_backup.begin(),dis_new_LC[idnearest]);
-				dis_cluster_backup[1] = dis_new_LC[idnearest+1];
-				return 1;
-			}
-		}
-		else if(idnearest == (positionserial.size() - 1))//if the nearest lc is the last lc
-		{
-			if(idnearest != dis_cluster_backup.size())
-			{
-				cout<<"positionserial.size: "<<positionserial.size()<<endl;
-				cout<<"dis_cluster_backup.size: "<<dis_cluster_backup.size()<<endl;
-				
-				cout<<"dis_cluster_start_end.size: "<<dis_cluster_start_end.size()<<endl;
-				cout<<"idnearest: "<<idnearest<<endl;
-				cout<<"last ID does not match the last backup distance!"<<endl;
-				cout<<"id of current cluster: "<<id_cluster<<endl;
-				printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-				exit(0);
-			}
-			if(dis_cluster_backup[idnearest-1]<=dis_new_LC[ idnearest-1])//instert to the last place
-			{
-				dis_cluster_backup.push_back(distance);
-				return -1;
-			}
-			else
-			{
-				*(dis_cluster_backup.end()-1) = dis_new_LC[idnearest-1];
-				dis_cluster_backup.push_back(dis_new_LC[idnearest]);
-				return -2;
-			}
-		}
-		else
-		{
-			if(dis_cluster_backup[idnearest-1]<=dis_new_LC[ idnearest-1])//insert after:dis be i,posserial i+1
-			{
-				//need to find out the effect of insert(position,val) 
-				dis_cluster_backup.insert(dis_cluster_backup.begin()+idnearest, dis_new_LC[ idnearest]);
-				*(dis_cluster_backup.begin()+idnearest+1) = dis_new_LC[ idnearest+1];
-				return idnearest+1;
-			}
-			else//insert before: dis be i,posserial i
-			{
-				dis_cluster_backup.insert(dis_cluster_backup.begin()+idnearest, dis_new_LC[ idnearest]);
-				*(dis_cluster_backup.begin()+idnearest-1) = dis_new_LC[ idnearest-1];
-				return idnearest;
-			}
-		}
-
-		if(dis_cluster_start_end.size()!=positionserial.size()-1)
-		{
-			cout<<"update distance abnormal: dis size does not match positionserial size"<<endl;
-			printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-			exit(0);
-		}	
-	}
-
-	void updateAfterChi2OK(std::array<double,6> Loopinfo, int insertPOsition)
-	{
-		double endDIS, startDIS;
-		if(insertPOsition >= 0)
-			positionserial.insert(positionserial.begin()+insertPOsition,Loopinfo);//update posserial
-		else
-		{
-			if(insertPOsition == -1)
-				positionserial.push_back(Loopinfo);
-			else if(insertPOsition == -2)
-				positionserial.insert(positionserial.end()-1,Loopinfo);
-			else
-			{
-				  printf("This fake error is in %s on line %d\n",         __FILE__, __LINE__);
-				  exit(0);
-			}
-				
-		}
-
-		//clear the backup dis vector
-		if(positionserial.size() <= 1)
-		{
-			cout<<"should not add distance to :"<<id_cluster<<endl;
-			printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-			exit(0);
-		}
-
-		dis_cluster_start_end.clear();
-
-		dis_cluster_start_end.assign(dis_cluster_backup.begin(), dis_cluster_backup.end());  
-
-		int x=0;
-		for(std::vector<std::array<double,6>>::const_iterator it = positionserial.begin(),
-			lendVertex = positionserial.end()-1;it!=lendVertex;it++)
-		{
-			// cout<<"debug updateAfterChi2OK x: "<<x<<endl;
-			std::array<double,6> lastLI = *it, LoopPosition = *(it+1);
-			startDIS = sqrt(pow(lastLI[1]-LoopPosition[1], 2)+pow(lastLI[2]-LoopPosition[2],2));
-			endDIS = sqrt(pow(lastLI[4]-LoopPosition[4],2)+pow(lastLI[5]-LoopPosition[5],2));
-			if (abs(endDIS+startDIS - dis_cluster_start_end[x]) > 0.001 )
-			{
-				cout<<"update distance abnormal: dis size does not match positionserial size"<<endl;
-				printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-				exit(0);
-			}
-			x++;
-		}
-
-	}
 };
 
 class Clusterizer
@@ -357,7 +181,8 @@ public:
 	}
 
 	void find_cons_cluster(IntPairSet::const_iterator & LP_nodes,  std::vector<cluster>& _clustersFound, std::vector<int> & cons_cluster_number,
-		std::map<std::pair<int, int>, std::pair<g2o::SE2, Matrix3d> >	& LP_Trans_Covar_Map, std::vector<std::array<double,4>> & VertexInf)
+		std::map<std::pair<int, int>, std::pair<g2o::SE2, Matrix3d> >	& LP_Trans_Covar_Map, 
+		std::vector<std::array<double,4>> & VertexInf, bool debug)
 	{
 		double dis = 0, ID = 0, id_of_nearestLC = 0, deltaX1, deltaY1, deltaX2, deltaY2, covX, covY;
 		int start, end;
@@ -368,6 +193,7 @@ public:
 		Matrix3d  cov1, cov2, midCov;
 		std::pair<int, int> loop_node_pair;
 		cons_cluster_number.clear();
+
 		//iterate the elements in clusters, if find one consistent cluster, jump out loop.
 		for(int i=_clustersFound.size()-1; i >= 0; i--)
 		{
@@ -398,7 +224,7 @@ public:
 			if(start > end)
 			{
 				synthesize_odo_edges( end,  start,  OdoInf, Trans1,  cov1);
-				Trans1.inverse();
+				Trans1 = Trans1.inverse();
 			}
 			else
 				synthesize_odo_edges( start,  end,  OdoInf, Trans1,  cov1);
@@ -414,7 +240,7 @@ public:
 			if(start > end)
 			{
 				synthesize_odo_edges( end,  start,  OdoInf, Trans2,  cov2);
-				Trans2.inverse();
+				Trans2 = Trans2.inverse();
 			}
 			else
 				synthesize_odo_edges( start,  end,  OdoInf, Trans2,  cov2);
@@ -430,7 +256,7 @@ public:
 			FullInfo[2] = std::pair<g2o::SE2, Matrix3d> (Trans2, cov2);
 			FullInfo[2] = std::pair<g2o::SE2, Matrix3d> (Trans2, cov2);
 			midTrans    = LP_Trans_Covar_Map[loop_node_pair].first;
-			midTrans.inverse();
+			midTrans = midTrans.inverse();
 			midCov      = LP_Trans_Covar_Map[loop_node_pair].second;
 			FullInfo[3] = std::pair<g2o::SE2, Matrix3d> (midTrans, midCov);
 
@@ -459,16 +285,29 @@ public:
 				cout<<"displayCov.inverse():"<<endl;
 				cout<<displayCov.inverse()<<endl;
 					cout<<" "<<endl;
+
+
+					cons_cluster_number.push_back(i);
 					continue;
 				}
 				else
 				{
 					cout<<"prefect "<<endl;
+
+					cout<<" test      loop: "<<(*LP_nodes).first<<" "<<(*LP_nodes).second<<endl;
+					cout<<"loop in cluster: "<<loop_node_pair.first<<" "<<loop_node_pair.second<<" in cluster "<< i<<endl;
+					cout<<"covX: "<<covX<<" covY: "<<covY<<"covAngle: "<<displayCov(2,2)<<" reV.second: "<<reV.second<<endl;
+
 					cons_cluster_number.push_back(i);
 				}
 			}
 			else
 			{
+				if(reV.first < 20)
+				{
+
+				}
+
 				cout<<" test      loop: "<<(*LP_nodes).first<<" "<<(*LP_nodes).second<<endl;
 				cout<<"loop in cluster: "<<loop_node_pair.first<<" "<<loop_node_pair.second<<endl;
 				cout<<"cov1x: "<<cov1(0,0)<<" cov1Y: "<<cov1(1,1)<<" cov2x: "<<cov2(0,0)<<"cov2Y: "<<cov2(1,1)<<endl;
@@ -588,6 +427,12 @@ public:
 			return;
 		}
 		_clustersFound.clear();
+
+		// //debug check the result of one loop closure multiply the inverse of itself 
+		// for(IntPairSet::const_iterator it = loops.begin(), lend = loops.end();it!=lend;it++)
+		// {
+
+		// }
 		for(IntPairSet::const_iterator it = loops.begin(), lend = loops.end();it!=lend;it++)
 		{
 
@@ -625,7 +470,7 @@ public:
 				//search for the nearest cluster to the loop
 				std::vector<int>  cons_cluster_number;
 		
-				find_cons_cluster( it,  _clustersFound,  cons_cluster_number, LP_Trans_Covar_Map, VertexInf);
+				find_cons_cluster( it,  _clustersFound,  cons_cluster_number, LP_Trans_Covar_Map, VertexInf, 1);
 
 				//size equal to 0, then it means find no constent cluster, so construct a new cluster
 				if(cons_cluster_number.size() == 0)
@@ -645,7 +490,7 @@ public:
 				{
 					cout<<" consistent cluster: "<<cons_cluster_number[0]<<endl;
 
-					sleep(2);
+					// sleep(2);
 					int consCluster_serialNum = cons_cluster_number[0];
 					_clustersFound[consCluster_serialNum].positionserial.push_back(fullLoopInfo);
 
@@ -656,6 +501,11 @@ public:
 				else 
 				{
 					cout<<"consistent more than one cluster that is consistent to the test loop"<<endl;
+					cout<<" cons_cluster_number.size is "<<cons_cluster_number.size()<<endl;
+					
+					cout<<" cons_cluster_number element:  "<<cons_cluster_number[0]<<" "<<cons_cluster_number[1]<<endl;
+					cout<<" numbers in pervious clusters:  "<<_clustersFound[cons_cluster_number[0]].positionserial.size()<<
+						" "<<_clustersFound[cons_cluster_number[1]].positionserial.size()<<endl;
 					printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
 					exit(0);
 				}					
