@@ -39,61 +39,9 @@ struct cluster
 
 	cluster(): startLow(-1), startHigh(-1), endLow(-1), endHigh(-1), size(0) {}
 	cluster(int start, int end, int idofcluster) : startLow(start), startHigh(start), endLow(end), endHigh(end), size(1), id_cluster(idofcluster){}
-/*
-	bool contains(int start, int end, int threshold)
-	{
-		return
-				(
-					std::abs(start-startHigh) < threshold or	std::abs(start-startLow)  < threshold
-				)
-				and
-				(
-					std::abs(end-endHigh) < threshold or std::abs(end-endLow) < threshold
-				);
 
-	}*/
 
 	//return  the ID of nearest LC and the distance
-	std::array<double,2> cal_distance( std::array<double,6> LoopPosition)
-	{
-		
-		double startDIS,endDIS;
-		int IDofNearestLC=0, IDDynamic=0;
-		std::array<double,6> lastLI;
-		std::array<double,2> ret;
-
-		dis_new_LC.clear();
-
-		if(positionserial.size()==0)
-			cout<<"can't calculate distance because positionserial has no information"<<endl;
-
-		for(std::vector<std::array<double,6>>::const_iterator it = positionserial.begin(),
-			lendVertex = positionserial.end();it!=lendVertex;it++)
-		{
-			lastLI = *it;
-			startDIS = sqrt(pow(lastLI[1]-LoopPosition[1], 2)+pow(lastLI[2]-LoopPosition[2], 2));
-			endDIS = sqrt(pow(lastLI[4]-LoopPosition[4], 2)+pow(lastLI[5]-LoopPosition[5], 2));
-			if(it == positionserial.begin())
-			{
-				// ret[0] = startDIS;
-				ret[0] = IDofNearestLC;
- 				ret[1] = endDIS+startDIS;
-			}
-			else if (endDIS+startDIS < ret[1])
-			{
-				// ret[0] = startDIS;
-				ret[0] = IDofNearestLC;
-				ret[1] = endDIS+startDIS;
-			}
-			IDofNearestLC++;
-			//add distance to list
-			dis_new_LC.push_back(endDIS+startDIS);
-		}
-		// cout<<"size of dis_new_LC: "<<dis_new_LC.size()<<endl;
-		nearestLCID = ret[0];
-		return ret;
-	}
-
 
 	int  update_distance(int idnearest, double distance)
 	{
@@ -342,212 +290,7 @@ public:
 		retu = 1;
 		return retu;
 	}
-	bool get_cluster_node_scequence(std::vector<std::vector< std::vector<int> > > & node_sequence, const std::vector<cluster> & clustersFound,
-		std::vector<std::vector<int> > & merge_vector)
-	{
 
-		std::vector<int> nodes_dout, nodes_din;
-		std::vector<std::vector<int> > element;
-		bool retu = 0;
-		node_sequence.clear();
-		for(int i = 0; i < clustersFound.size(); ++i)
-		{
-			nodes_dout.clear();
-			nodes_din.clear();	
-			element.clear();	
-			for(int k =0; k<clustersFound[i].positionserial.size(); k++)
-			{
-				nodes_dout.push_back(clustersFound[i].positionserial[k][0]);
-				nodes_din.push_back(clustersFound[i].positionserial[k][3]);
-			}
-
-			element.push_back(nodes_dout);
-			element.push_back(nodes_din);	
-			node_sequence.push_back(element);
-			// cout<<"i: "<<i<<endl;
-			
-			// cout<<"clustersFound[i].positionserial.size: "<<clustersFound[i].positionserial.size()<<endl;
-			
-			// cout<<"nodes_dout.size: "<<nodes_dout.size()<<endl;
-			// cout<<"node_sequence[i][0].size: "<<node_sequence[i][0].size()<<endl;
-			// cout<<"node_sequence[i][1].size: "<<node_sequence[i][1].size()<<endl;
-
-
-			// std::cout << "nodes_dout sequence of cluster["<<i<<"]:"<<endl;
-			// for (std::vector< int>::iterator it=nodes_dout.begin(); it!=nodes_dout.end(); ++it)
-			// 	cout <<*it<<" ";
-			// cout<<endl;
-
-			// std::cout << "nodes_din  sequence of cluster["<<i<<"]:"<<endl;
-			// for (std::vector< int>::iterator it=nodes_din.begin(); it!=nodes_din.end(); ++it)
-			// 	cout <<*it<<" ";
-			// cout<<endl;
-		}
-		// exit(0);
-		retu = 1;
-		return retu;
-	}
-	// check merge 
-	void detect_cluster_merge( std::vector<cluster> & clusterset, std::vector<std::vector<int > > & consistent_pair_clusterr, 
-		std::vector<std::vector<std::pair<double, int> > > & nearest_dis_sequence, double thres)
-	{
-		std::vector<std::array<double,6>> ends_lc_cluster;
-		std::vector<int> ele_consistent_pair_clusterr;
-		std::array<double,2> return_cal_dis, return_chi2_test;
-		std::pair<double, int> dis_ele;
-		std::vector<std::pair<double, int> > sequence_dis_interClusters;
-		
-		consistent_pair_clusterr.clear();
-
-		int middle_lc_id;
-		//if the number of clusters <2, there is no need to merge
-		if(clusterset.size()<2)
-		{
-			return ;
-		}
-		nearest_dis_sequence.clear();
-		for(int i = 0;i<clusterset.size();i++)
-		{
-			int j = 0;
-			sequence_dis_interClusters.clear();
-			
-			for(j = 0;j<clusterset.size();j++)
-			{
-				if(i == j)
-				{
-					dis_ele.first = 0;
-					dis_ele.second = i;
-				}
-				else
-				{
-					if(clusterset[i].positionserial.size() % 2 == 0)
-						middle_lc_id = (clusterset[i].positionserial.size() / 2) - 1;
-					else
-						middle_lc_id = ((clusterset[i].positionserial.size() + 1) / 2)-1;
-					return_cal_dis = clusterset[j].cal_distance(clusterset[i].positionserial[middle_lc_id]);
-					dis_ele.first = return_cal_dis[1];
-					dis_ele.second = j;
-				}
-				sequence_dis_interClusters.push_back(dis_ele);
-			}
-			// // print out content:
-			// std::cout << "before sort:";
-			// for (std::vector<std::pair<double, int> >::iterator it=sequence_dis_interClusters.begin(); it!=sequence_dis_interClusters.end(); ++it)
-			// 	cout <<"dis: "<< (*it).first<<" ID: "<<(*it).second<<"\n"<<endl;
-			// // std::cout << '\n';
-			std::sort(sequence_dis_interClusters.begin(), sequence_dis_interClusters.end(), cmp);
-			// // print out content:
-			// std::cout << "after sort:";
-			// for (std::vector<std::pair<double, int> >::iterator it=sequence_dis_interClusters.begin(); it!=sequence_dis_interClusters.end(); ++it)
-			// 	cout <<"dis: "<< (*it).first<<" ID: "<<(*it).second<<"\n"<<endl;
-			// cout<<"i: "<<i<<" j: "<<j<<endl;
-			// exit(0);
-			nearest_dis_sequence.push_back(sequence_dis_interClusters);
-		}
-		for(int i = 0; i < clusterset.size(); i++)
-		{
-			if(nearest_dis_sequence[i].size() != clusterset.size())
-			{
-				cout<<"clusterset.size(): "<<clusterset.size()<<" nearest_dis_sequence[i].size(): "<<nearest_dis_sequence[i].size()<<" i: "<<i<<endl;
-				printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-				exit(0);
-			}
-		}
-
-		for(int i = 0;i<clusterset.size();i++)
-		{
-			ele_consistent_pair_clusterr.clear();
-			ends_lc_cluster.clear();
-			ends_lc_cluster.push_back(clusterset[i].positionserial[0]);
-			ends_lc_cluster.push_back(clusterset[i].positionserial.back());
-			bool bit =0;
-			
-			for(int j = 1;j<nearest_dis_sequence[i].size();j++)
-			{
-				// if(j == i)
-				// 	continue;		
-				// ends_lc_cluster.push_back(clusterset[j].positionserial[0]);
-				// ends_lc_cluster.push_back(clusterset[j].positionserial.back());
-				if(ends_lc_cluster.size() != 2)
-				{
-					printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-					exit(0);
-				}
-				if(clusterset[nearest_dis_sequence[i][j].second].positionserial.size() == 1)
-					continue;
-				for(int k = 0; k < 2; k++)
-				{
-					if(k<2)
-					{
-						//calculate distance ,update distacne ,chi2 test
-
-						return_cal_dis = clusterset[nearest_dis_sequence[i][j].second].cal_distance(ends_lc_cluster[k]);
-
-						clusterset[nearest_dis_sequence[i][j].second].update_distance(round(return_cal_dis[0]), return_cal_dis[1]);
-
-						if(clusterset[nearest_dis_sequence[i][j].second].dis_cluster_backup.size()-clusterset[nearest_dis_sequence[i][j].second].dis_cluster_start_end.size() != 1)
-						{
-							cout<<"i: "<<i<<" j: "<<j<<" dis backup size: "<<clusterset[j].dis_cluster_backup.size()<<
-								"  dis cluster start end: "<<clusterset[j].dis_cluster_start_end.size()<<endl;
-							printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-							exit(0);
-						}
-						return_chi2_test = chi2_test(clusterset[nearest_dis_sequence[i][j].second].dis_cluster_backup, 
-							clusterset[nearest_dis_sequence[i][j].second].dis_cluster_start_end);
-
-						double sum = std::accumulate(std::begin(clusterset[nearest_dis_sequence[i][j].second].dis_cluster_backup), 
-							std::end(clusterset[nearest_dis_sequence[i][j].second].dis_cluster_backup), 0.0);  
-						double mean =  sum / clusterset[nearest_dis_sequence[i][j].second].dis_cluster_backup.size(); //均值  
-						double single_chi_statis = (return_cal_dis[1]-mean)*(return_cal_dis[1]-mean)/mean;
-						// if((return_chi2_test[0] > 0.05 and abs(return_chi2_test[0] - return_chi2_test[1]) < thres) or (return_cal_dis[1] < 2))
-						if((single_chi_statis < 3.84) or (return_cal_dis[1] < 2))
-						{
-							if((clusterset[i].positionserial.size() == 2) and (k == 0))
-							{
-								bit =1;
-								continue;
-							}
-							if((clusterset[i].positionserial.size() == 2) and (bit == 1))
-							{
-								ele_consistent_pair_clusterr.push_back(nearest_dis_sequence[i][j].second);
-								bit = 0;
-								break;
-							}
-							ele_consistent_pair_clusterr.push_back(nearest_dis_sequence[i][j].second);
-							break;
-						}
-					}
-				}
-
-			}
-			consistent_pair_clusterr.push_back(ele_consistent_pair_clusterr);
-		}
-		for(int i = 0; i < consistent_pair_clusterr.size(); i++)
-		{
-			// if(consistent_pair_clusterr[i].size() == 0)
-			// {
-			// 	if()
-			// 	{
-
-			// 	}
-			// 	for(int j = 0; j < consistent_pair_clusterr.size(); j++)
-			// 	{
-			// 		if(consistent_pair_clusterr[j].size() == 0)
-			// 			continue;
-			// 		//find i  
-			// 		vector<int>::iterator iter=find(consistent_pair_clusterr[j].begin(),consistent_pair_clusterr[j].end(),i);  
-					      
-			// 		//delete i 
-			// 		if(iter!=consistent_pair_clusterr[j].end())
-			// 			consistent_pair_clusterr[j].erase(iter);  
-			// 	}
-			// }
-
-		}
-
-
-		// printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-	}
 
 	void setClusterID(const IntPair& loopClosure, int ID)
 	{
@@ -613,65 +356,167 @@ public:
 		return fullLoopInfo;
 	}
 
-	std::array<double,3> find_nearest_cluster(std::array<double,6> fullLoopInfo,  std::vector<cluster>& _clustersFound)
+	void find_cons_cluster(IntPairSet::const_iterator & LP_nodes,  std::vector<cluster>& _clustersFound, std::vector<int> & cons_cluster_number,
+		std::map<std::pair<int, int>, std::pair<g2o::SE2, Matrix3d> >	& LP_Trans_Covar_Map, std::vector<std::array<double,4>> & VertexInf)
 	{
-		double dis = 0, ID = 0;
-		double id_of_nearestLC = 0;
+		double dis = 0, ID = 0, id_of_nearestLC = 0, deltaX1, deltaY1, deltaX2, deltaY2, covX, covY;
+		int start, end;
 		std::array<double,3> returndis;
 		std::array<double,2> returnmid;
-
-		// for(size_t i=0; i<_clustersFound.size(); i++)
-		// // for(size_t i=i<_clustersFound.size()-1; i<_clustersFound.size(); i++)
-		// {
-		// 	returnmid=_clustersFound[i].cal_distance(fullLoopInfo);
-		// 	if(i == 0)
-		// 	{
-		// 		ID = 0;
-		// 		dis = returnmid[1];
-		// 		id_of_nearestLC = returnmid[0];
-		// 	}
-			
-		// 	else if(returnmid[1] < dis)
-		// 	{
-		// 		ID = i;
-		// 		dis = returnmid[1];
-		// 		id_of_nearestLC = returnmid[0];
-		// 	}
-		// 	//debug: find cluster 9 error
-
-		// 	if(_clustersFound[i].positionserial.size() - _clustersFound[i].dis_cluster_start_end.size() != 1)
-		// 	{
-		// 		printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
-		// 		exit(0);
-		// 	}
-
-		// }
-		// returndis[0] = ID;
-		// returndis[1] = dis;
-		// returndis[2] = id_of_nearestLC;
-		// return returndis;
-
-		for(size_t i=i<_clustersFound.size()-1; i<_clustersFound.size(); i++)
+		std::array<std::pair<g2o::SE2, Matrix3d>, 4> FullInfo;
+		g2o::SE2  Trans1, Trans2, midTrans;
+		Matrix3d  cov1, cov2, midCov;
+		std::pair<int, int> loop_node_pair;
+		cons_cluster_number.clear();
+		//iterate the elements in clusters, if find one consistent cluster, jump out loop.
+		for(int i=_clustersFound.size()-1; i >= 0; i--)
 		{
-			returnmid=_clustersFound[i].cal_distance(fullLoopInfo);
-
-				ID = i;
-				dis = returnmid[1];
-				id_of_nearestLC = returnmid[0];
-
-			//debug: find cluster 9 error
-
-			if(_clustersFound[i].positionserial.size() - _clustersFound[i].dis_cluster_start_end.size() != 1)
+			//get the nearest distance to the cluster to judge whether the consistency check is reliable
+			//how to get the vertexinfro 
+			if(_clustersFound.size() == 1)
 			{
-				printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
-				exit(0);
-			}
+				std::array<double,4> startv = VertexInf[(*LP_nodes).first];
+				std::array<double,4> endv = VertexInf[(*LP_nodes).second];
 
+					deltaX1 = abs(_clustersFound[0].positionserial.back()[1] - startv[1]);
+					deltaY1 = abs(_clustersFound[0].positionserial.back()[2] - startv[2]);
+
+					deltaX2 = abs(_clustersFound[0].positionserial.back()[4] - endv[1]);
+					deltaY2 = abs(_clustersFound[0].positionserial.back()[5] - endv[2]);
+					printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
+			}
+			else
+			{
+				get_distance_to_neighbor_cluster(i, _clustersFound, deltaX1,  deltaY1, deltaX2,  deltaY2);
+				printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
+			}
+			//synthesize the start odometry edges
+			loop_node_pair.first = _clustersFound[i].positionserial.back()[0];
+			loop_node_pair.second = _clustersFound[i].positionserial.back()[3];
+			start = loop_node_pair.first;
+			end   = (*LP_nodes).first;
+			if(start > end)
+			{
+				synthesize_odo_edges( end,  start,  OdoInf, Trans1,  cov1);
+				Trans1.inverse();
+			}
+			else
+				synthesize_odo_edges( start,  end,  OdoInf, Trans1,  cov1);
+			bool accept = 0;
+			if(cov1(0,0) > deltaX1)
+				accept = 1;
+			if(cov1(1,1) > deltaY1)
+				accept = 1;
+			//synthesize the end odometry edges
+			start = (*LP_nodes).second ;
+			end   = loop_node_pair.second;
+
+			if(start > end)
+			{
+				synthesize_odo_edges( end,  start,  OdoInf, Trans2,  cov2);
+				Trans2.inverse();
+			}
+			else
+				synthesize_odo_edges( start,  end,  OdoInf, Trans2,  cov2);
+			if(cov2(0,0) > deltaX2)
+				accept = 1;
+			if(cov2(1,1) > deltaY2)
+				accept = 1;
+	
+			//assign value of 4 parts which from one cycle, the sequence is from part1{lastloop.start > test_loop.start} to part2{test_loop}
+			// to part3 {test_loop.second > last_loop.second} to part4{the inverse of last_loop} 
+			FullInfo[0] = std::pair<g2o::SE2, Matrix3d> (Trans1, cov1);
+			FullInfo[1] = LP_Trans_Covar_Map[(*LP_nodes)];
+			FullInfo[2] = std::pair<g2o::SE2, Matrix3d> (Trans2, cov2);
+			FullInfo[2] = std::pair<g2o::SE2, Matrix3d> (Trans2, cov2);
+			midTrans    = LP_Trans_Covar_Map[loop_node_pair].first;
+			midTrans.inverse();
+			midCov      = LP_Trans_Covar_Map[loop_node_pair].second;
+			FullInfo[3] = std::pair<g2o::SE2, Matrix3d> (midTrans, midCov);
+
+			std::pair<bool, double> reV;
+			double  transX_residual;
+			double  transY_residual;
+			double  transA_residual;
+
+			reV = check_single_loop_inter(FullInfo, covX, covY, displayCov, transX_residual, transY_residual, transA_residual);
+			if(reV.first == 1)
+			{
+				cout<<"pass chi2"<<endl;
+				if(accept == 1)
+				{
+					cout<<"accept == 1"<<endl;
+					cout<<"cov1x: "<<cov1(0,0)<<" cov1Y: "<<cov1(1,1)<<" cov2x: "<<cov2(0,0)<<"cov2Y: "<<cov2(1,1)<<endl;
+					cout<<"deltaX1: "<<deltaX1<<" deltaY1: "<<deltaY1<<" deltaX2: "<<deltaX2<<" deltaY2: "<<deltaY2<<endl;
+					cout<<"transX_residual: "<<transX_residual<<" transY_residual: "<<transY_residual<<"transA_residual: "<<transA_residual<<endl;
+					cout<<"covX: "<<covX<<" covY: "<<covY<<"covAngle: "<<displayCov(2,2)<<" reV.second: "<<reV.second<<endl;
+					cout<<"test loop.first: "<<(*LP_nodes).first<<" test loop.second: "<<(*LP_nodes).second<<endl;
+					cout<<"loop_node_pair.first: "<<loop_node_pair.first<<" loop_node_pair.second: "<<loop_node_pair.second<<endl;
+
+									cout<<"displayCov:"<<endl;
+				cout<<displayCov<<endl;
+
+				cout<<"displayCov.inverse():"<<endl;
+				cout<<displayCov.inverse()<<endl;
+					cout<<" "<<endl;
+					continue;
+				}
+				else
+				{
+					cout<<"prefect "<<endl;
+					cons_cluster_number.push_back(i);
+				}
+			}
+			else
+			{
+				cout<<" test      loop: "<<(*LP_nodes).first<<" "<<(*LP_nodes).second<<endl;
+				cout<<"loop in cluster: "<<loop_node_pair.first<<" "<<loop_node_pair.second<<endl;
+				cout<<"cov1x: "<<cov1(0,0)<<" cov1Y: "<<cov1(1,1)<<" cov2x: "<<cov2(0,0)<<"cov2Y: "<<cov2(1,1)<<endl;
+				cout<<"deltaX1: "<<deltaX1<<" deltaY1: "<<deltaY1<<" deltaX2: "<<deltaX2<<" deltaY2: "<<deltaY2<<endl;
+				cout<<"transX_residual: "<<transX_residual<<" transY_residual: "<<transY_residual<<"transA_residual: "<<transA_residual<<endl;
+				cout<<"covX: "<<covX<<" covY: "<<covY<<" covAngle: "<<displayCov(2,2)<<" reV.second: "<<reV.second<<endl;
+													cout<<"displayCov:"<<endl;
+				cout<<displayCov<<endl;
+				cout<<"displayCov.inverse():"<<endl;
+				cout<<displayCov.inverse()<<endl;
+				cout<<" "<<endl;
+			}
 		}
-		returndis[0] = ID;
-		returndis[1] = dis;
-		returndis[2] = id_of_nearestLC;
-		return returndis;
+
+	}
+	void get_distance_to_neighbor_cluster(int i, std::vector<cluster>& _clustersFound, double & disx1, double & disy1, double & disx2, double & disy2)
+	{
+		disx1 = 10000;
+		disy1 = 10000;
+		disx2 = 10000;
+		disy2 = 10000;
+		for(int j = 0; j<_clustersFound.size(); j++)
+		{
+			if(j == i)
+				continue;
+			//disX1
+			if(abs(_clustersFound[j].positionserial[0][1] - _clustersFound[i].positionserial.back()[1]) <  disx1)
+				disx1 = abs(_clustersFound[j].positionserial[0][1] - _clustersFound[i].positionserial.back()[1]);
+			if(abs(_clustersFound[j].positionserial.back()[1] - _clustersFound[i].positionserial.back()[1]) <  disx1)
+				disx1 = abs(_clustersFound[j].positionserial.back()[1] - _clustersFound[i].positionserial.back()[1]);
+
+			//disY1
+			if(abs(_clustersFound[j].positionserial[0][2] - _clustersFound[i].positionserial.back()[2]) <  disy1)
+				disy1 = abs(_clustersFound[j].positionserial[0][2] - _clustersFound[i].positionserial.back()[2]);
+			if(abs(_clustersFound[j].positionserial.back()[2] - _clustersFound[i].positionserial.back()[2]) <  disy1)
+				disy1 = abs(_clustersFound[j].positionserial.back()[2] - _clustersFound[i].positionserial.back()[2]);
+			
+
+			if(abs(_clustersFound[j].positionserial[0][4] - _clustersFound[i].positionserial.back()[4]) <  disx2)
+				disx2 = abs(_clustersFound[j].positionserial[0][4] - _clustersFound[i].positionserial.back()[4]);
+			if(abs(_clustersFound[j].positionserial.back()[4] - _clustersFound[i].positionserial.back()[4]) <  disx2)
+				disx2 = abs(_clustersFound[j].positionserial.back()[4] - _clustersFound[i].positionserial.back()[4]);
+
+			if(abs(_clustersFound[j].positionserial[0][5] - _clustersFound[i].positionserial.back()[5]) <  disy2)
+				disy2 = abs(_clustersFound[j].positionserial[0][5] - _clustersFound[i].positionserial.back()[5]);	
+			if(abs(_clustersFound[j].positionserial.back()[5] - _clustersFound[i].positionserial.back()[5]) <  disy2)
+				disy2 = abs(_clustersFound[j].positionserial.back()[5] - _clustersFound[i].positionserial.back()[5]);
+		}
 	}
 		
 	std::array<double,2> chi2_test(const std::vector<double> & dis_clu, const std::vector<double> & dis_clu_real)
@@ -755,16 +600,10 @@ public:
 			}
 			//get loop closure vextexes position
 			fullLoopInfo = get_LC_Pos( start,  end);
-			//construct the transfrom and covariance of this
-
-			LP_Trans_Covar_Map[it] = 
-
 			//print loop number and cluster id of the loop
 			num_loop++;
-			// cout<<"loop "<<num_loop<<" "<<start<<" "<<end<<endl;
-
-
-
+			cout<<"loop "<<num_loop<<" "<<start<<" "<<end<<endl;
+			cout<<"current has "<<_clustersFound.size()<<" clusters"<<endl;
 
 			if(_clustersFound.empty())
 			{
@@ -772,9 +611,6 @@ public:
 				s.positionserial.push_back(fullLoopInfo);
 
 				_clustersFound.push_back(s);
-
-			// cout<<"fullLoopInfo: "<<fullLoopInfo[0]<<" "<<fullLoopInfo[1]<<" "<<fullLoopInfo[2]<<" "<<fullLoopInfo[3]<<
-			// " "<<fullLoopInfo[4]<<" "<<fullLoopInfo[5]<<endl;
 
 						cout<<"fullLoopInfo: "<<s.positionserial[0][0]<<" "<<s.positionserial[0][1]<<" "
 						<<s.positionserial[0][2]<<" "<<s.positionserial[0][3]<<
@@ -786,461 +622,68 @@ public:
 			}
 			else
 			{
-				// cluster* currentCluster = NULL;
-
 				//search for the nearest cluster to the loop
-				nearest_cluster = find_nearest_cluster(fullLoopInfo, _clustersFound);
-				
-
-							// if(fullLoopInfo[0] == 3521)
-							// {
-							// 	for (int p=0;p<_clustersFound[nearest_cluster[0]].dis_cluster_start_end.size();p++)
-							// 	{
-							// 		cout<<_clustersFound[nearest_cluster[0]].dis_cluster_start_end[p]<<" "<<endl;
-							// 	}
-							// 	cout<<"nearestCLusterID "<<nearest_cluster[0]<<" pos id:"<<nearest_cluster[2]<<" distance: "<<nearest_cluster[1]<<
-							// 		" num of clusters: "<<_clustersFound.size()<<endl;
-							// 		 exit(0);
-							// }
-
-
-				// cout<<"zihao_cluster size of dis_new_LC:"<<_clustersFound[nearest_cluster[0]].dis_new_LC.size()<<endl;
-				// cout<<"zihao_cluster size of _clustersFound:"<<_clustersFound.size()<<endl;
-				// for(int i=0; i<_clustersFound.size();i++)
-				// {
-				// 	cout<<"cluster "<<i<<" has "<<_clustersFound[i].dis_new_LC.size()<<"elements in dis_new_LC"<<endl;
-				// }
-
-				
-				//update distance serial of the nearest cluster
-				int inspo = _clustersFound[nearest_cluster[0]].update_distance(round(nearest_cluster[2]),nearest_cluster[1]);
-				// cout<<"inspo:"<<inspo<<endl;
-
-				//if the size of dis_cluster is bigger than one, we do chi2 test    dis_cluster_backup
-				// if(_clustersFound[nearest_cluster[0]].dis_cluster_start_end.size()==1)
-				if(_clustersFound[nearest_cluster[0]].dis_new_LC.size()==1)
-				{
-					if(_clustersFound[nearest_cluster[0]].positionserial.size()!=1)
-					{
-						printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
-						exit(0);
-					}
-
-					clusterIDtoLoopsMap[nearest_cluster[0]].insert(*it);
-					loopToClusterIDMap[*it] = nearest_cluster[0];
-
-					_clustersFound[nearest_cluster[0]].dis_cluster_start_end.push_back(nearest_cluster[1]);
-					_clustersFound[nearest_cluster[0]].positionserial.push_back(fullLoopInfo);
-					//debug: find out why one loop should have distance element in dis_cluster_start_end
-					if(_clustersFound[nearest_cluster[0]].positionserial.size() == 1)
-					{
-						printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
-						cout<<"should not add distance to :"<<_clustersFound[nearest_cluster[0]].id_cluster<<endl;
-						exit(0);
-					}
-					
-				}
-				else
-				{
-					// _clustersFound[nearest_cluster[0]].update_distance();	 
-					// p_value = chi2_test(_clustersFound[nearest_cluster[0]].dis_cluster_start_end);
-					p_value = chi2_test(_clustersFound[nearest_cluster[0]].dis_cluster_backup, 
-						_clustersFound[nearest_cluster[0]].dis_cluster_start_end);
-
-
-					 // cout<<"thres: "<<thres<<endl;
-
-					// if(nearest_cluster[1] < 2 )
-					// {
-					//  	clusterIDtoLoopsMap[nearest_cluster[0]].insert(*it);
-					// 	loopToClusterIDMap[*it] = nearest_cluster[0];
-					// 	_clustersFound[nearest_cluster[0]].updateAfterChi2OK(fullLoopInfo, inspo);
-					// } //else 
-					if((p_value[0] > 0.05) and (abs(p_value[0] - p_value[1]) < thres))//
-					 {
-					 	
-					 	clusterIDtoLoopsMap[nearest_cluster[0]].insert(*it);
-						loopToClusterIDMap[*it] = nearest_cluster[0];
-						_clustersFound[nearest_cluster[0]].updateAfterChi2OK(fullLoopInfo, inspo);
+				std::vector<int>  cons_cluster_number;
 		
-					 }
-					 else
-					 {
-					 	int num = _clustersFound[nearest_cluster[0]].dis_cluster_backup.size();
-					 	double dis1 = *(_clustersFound[nearest_cluster[0]].dis_new_LC.begin());
-					 	double dis2 = *(_clustersFound[nearest_cluster[0]].dis_new_LC.begin()+1);
+				find_cons_cluster( it,  _clustersFound,  cons_cluster_number, LP_Trans_Covar_Map, VertexInf);
 
+				//size equal to 0, then it means find no constent cluster, so construct a new cluster
+				if(cons_cluster_number.size() == 0)
+				{
+					cluster s(start,end,_clustersFound.size());
+					s.positionserial.push_back(fullLoopInfo);
 
-					 	if(num>2)
-					 	{
-					 		std::array<double,6> lpb,lpa,lpme;
-					 		std::vector <double> dis_to_extract, dis_to_extractx;
-					 		double disba,disx;
-					 		bool cona,conb;
-
-					 		dis_to_extract.assign(_clustersFound[nearest_cluster[0]].dis_cluster_start_end.begin(), _clustersFound[nearest_cluster[0]].dis_cluster_start_end.end());  
-					 		dis_to_extractx.assign(dis_to_extract.begin(),dis_to_extract.end());
-
-					 		//yao kao lv zai mo wei de qing juang
-					 		lpme = _clustersFound[nearest_cluster[0]].positionserial[nearest_cluster[2]];
-
-					 		if(nearest_cluster[2] > _clustersFound[nearest_cluster[0]].dis_cluster_start_end.size())
-					 		{
-					 			cout<<"nearest_cluster[2] "<<nearest_cluster[2]<<" _clustersFound.size"<<_clustersFound.size()<<endl;
-						 		cout<<_clustersFound[nearest_cluster[0]].dis_cluster_start_end.size()<<endl;
-					 			printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
-								exit(0);
-					 		}
-
-					 		if(nearest_cluster[2] == 0)
-					 		{
-						 		// lpb = _clustersFound[nearest_cluster[0]].positionserial[nearest_cluster[2]-1];
-						 		lpa = _clustersFound[nearest_cluster[0]].positionserial[nearest_cluster[2]+1];
-					 			cona = _clustersFound[nearest_cluster[0]].dis_cluster_start_end[nearest_cluster[2]] > nearest_cluster[1];
-					 			conb = 1;
-
-						 		dis_to_extractx.erase(dis_to_extractx.begin()+nearest_cluster[2]);
-						 		// dis_to_extractx.erase(dis_to_extractx.begin()+nearest_cluster[2]-1);
-						 		// dis_to_extractx.insert(dis_to_extractx.begin()+nearest_cluster[2]-1,disba);
-
-					 		}
-					 		else if(nearest_cluster[2] == (_clustersFound[nearest_cluster[0]].positionserial.size() - 1))
-					 		{
-						 		lpb = _clustersFound[nearest_cluster[0]].positionserial[nearest_cluster[2]-1];
-						 		// lpa = _clustersFound[nearest_cluster[0]].positionserial[nearest_cluster[2]+1];
-					 			conb = _clustersFound[nearest_cluster[0]].dis_cluster_start_end.back() > nearest_cluster[1];
-					 			cona = 1;
-
-					 			dis_to_extractx.pop_back();
-						 		// dis_to_extractx.erase(dis_to_extractx.begin()+nearest_cluster[2]-1);
-						 		// dis_to_extractx.insert(dis_to_extractx.begin()+nearest_cluster[2]-1,disba);
-					 		} 
-					 		else
-					 		{
-					 			lpb = _clustersFound[nearest_cluster[0]].positionserial[nearest_cluster[2]-1];
-					 			lpa = _clustersFound[nearest_cluster[0]].positionserial[nearest_cluster[2]+1];
-					 			disba = sqrt(pow(lpb[1]-lpa[1], 2) + pow(lpb[2]-lpa[2], 2)) + sqrt(pow(lpb[4]-lpa[4], 2) + pow(lpb[5]-lpa[5], 2));
-
-					 			cona = _clustersFound[nearest_cluster[0]].dis_cluster_start_end[nearest_cluster[2]] > nearest_cluster[1];
-					 			conb = _clustersFound[nearest_cluster[0]].dis_cluster_start_end[nearest_cluster[2]-1] > nearest_cluster[1];
-
-					 			dis_to_extractx.erase(dis_to_extractx.begin()+nearest_cluster[2]);
-						 		dis_to_extractx.erase(dis_to_extractx.begin()+nearest_cluster[2]-1);
-						 		dis_to_extractx.insert(dis_to_extractx.begin()+nearest_cluster[2]-1,disba);
-
-					 		}
-		 		
-					 		if(((sqrt(pow(lpme[1]-fullLoopInfo[1], 2) + pow(lpme[2]-fullLoopInfo[2], 2)) + 
-					 			sqrt(pow(lpme[4]-fullLoopInfo[4], 2) + pow(lpme[5]-fullLoopInfo[5], 2))) - nearest_cluster[1]) > 0.001)
-					 		{
-					 			printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
-								exit(0);
-					 		}
-					 		
-					 		p_value = chi2_test(dis_to_extract, dis_to_extractx);
-					 		if(cona and conb and (p_value[1] > 0.05))
-					 		{
-					 			cout<<"pvalue[0]: "<<p_value[0]<<" pvalue[1]: "<<p_value[1]<<endl;
-								//create new cluster
-						 		cluster s(start,end,_clustersFound.size());
-						 		//add distance to new cluster
-								s.dis_cluster_start_end.push_back(nearest_cluster[1]);
-								//add posiinfo to new cluster
-								s.positionserial.push_back(*(_clustersFound[nearest_cluster[0]].positionserial.begin()+nearest_cluster[2]));
-								s.positionserial.push_back(fullLoopInfo);
-
-								//add new cluster to _clustersFound
-								_clustersFound.push_back(s);
-								//set LC and ID map
-								clusterIDtoLoopsMap[_clustersFound.size()-1].insert(*it);
-								loopToClusterIDMap[*it] = _clustersFound.size()-1;
-								//handle the ID and LC map of another loop 
-								std::pair<int,int> tochange;
-								int startID = lpme[0];
-								int endID = lpme[3];
-								tochange.first = startID;
-								tochange.second = endID;
-								//delete the last two elements in positionserial and two all elements in dis_serial
-								if(nearest_cluster[2] >= _clustersFound[nearest_cluster[0]].positionserial.size())
-								{
-					 				printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
-									exit(0);
-								}
-								if(1 == _clustersFound[nearest_cluster[0]].positionserial.size())
-								{
-					 				printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
-									exit(0);
-								}
-								
-								if(nearest_cluster[2] == (_clustersFound[nearest_cluster[0]].positionserial.size() - 1))
-								{
-									printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
-									_clustersFound[nearest_cluster[0]].dis_cluster_start_end.erase(
-										_clustersFound[nearest_cluster[0]].dis_cluster_start_end.begin()+nearest_cluster[2]-1);
-								}
-								else
-								{
-	
-									cout<<"nearest_cluster[2]: "<<nearest_cluster[2]<<endl;
-									cout<<" _clustersFound[nearest_cluster[0]].dis_cluster_start_end.size: "<<
-										_clustersFound[nearest_cluster[0]].dis_cluster_start_end.size()<<endl;
-
-									cout<<" _clustersFound[nearest_cluster[0]].positionserial.size: "<<
-										_clustersFound[nearest_cluster[0]].positionserial.size()<<endl;
-
-									_clustersFound[nearest_cluster[0]].dis_cluster_start_end.erase(
-										_clustersFound[nearest_cluster[0]].dis_cluster_start_end.begin()+nearest_cluster[2]);
-
-
-								}
-	
-								_clustersFound[nearest_cluster[0]].positionserial.erase(_clustersFound[nearest_cluster[0]].positionserial.begin()+nearest_cluster[2]);
-
-
-								cout<<"fullloop[0]: "<<fullLoopInfo[0]<<endl;
-
-								if(nearest_cluster[2] > 0 and nearest_cluster[2] < (_clustersFound[nearest_cluster[0]].positionserial.size() - 1))
-									_clustersFound[nearest_cluster[0]].dis_cluster_start_end[nearest_cluster[2]-1] = disba;
-
-
-								if(clusterIDtoLoopsMap[nearest_cluster[0]].count(tochange))
-								{
-									clusterIDtoLoopsMap[nearest_cluster[0]].erase(tochange);
-									clusterIDtoLoopsMap[_clustersFound.size()-1].insert(tochange);
-									//need to chage: delete map from loop to cluster ID
-									loopToClusterIDMap[tochange] = _clustersFound.size()-1;
-									cout<<"1 loop "<< tochange.first<<" and "<<tochange.second<<"to cluster id map: "<<
-										loopToClusterIDMap[tochange]<<endl;		
-								}
-								else
-								{
-									tochange.first = endID;
-									tochange.second = startID;
-									
-									cout<<"2 else  loop "<< tochange.first<<" and "<<tochange.second<<"to cluster id map: "<<
-										loopToClusterIDMap[tochange]<<endl;
-		
-								    for(std::set<std::pair<int,int >>::iterator it = clusterIDtoLoopsMap[0].begin();
-								    	it!=clusterIDtoLoopsMap[0].end();it++)  
-								    {  
-								            cout << (*it).first <<" "<< (*it).second << "}\n";  
-								    } 
-
-									if(!clusterIDtoLoopsMap[nearest_cluster[0]].count(tochange))
-									{
-										cout<<"can't find the previous loop in mapset"<<endl;
-										cout<<"id:"<<startID<<" "<<endID<<endl;
-										cout<<clusterIDtoLoopsMap[nearest_cluster[0]].size()<<endl;
-										cout<<"total cluster size:"<<_clustersFound.size()<<endl;
-										exit(0);
-									}
-									clusterIDtoLoopsMap[nearest_cluster[0]].erase(tochange);
-									clusterIDtoLoopsMap[_clustersFound.size()-1].insert(tochange);
-									loopToClusterIDMap[tochange] = _clustersFound.size()-1;
-
-								}
-
-					 		}
-					 		else
-					 		{
-						 		cluster s(start,end,_clustersFound.size());
-								s.positionserial.push_back(fullLoopInfo);
-
-								_clustersFound.push_back(s);
-								clusterIDtoLoopsMap[_clustersFound.size()-1].insert(*it);
-								loopToClusterIDMap[*it] = _clustersFound.size()-1;
-					 		}
-
-					 	}
-					 	else if((num == 2) and (_clustersFound[nearest_cluster[0]].dis_cluster_start_end[0]) <= nearest_cluster[1])
-					 	{
-					 		cluster s(start,end,_clustersFound.size());
-							s.positionserial.push_back(fullLoopInfo);
-
-							_clustersFound.push_back(s);
-							clusterIDtoLoopsMap[_clustersFound.size()-1].insert(*it);
-							loopToClusterIDMap[*it] = _clustersFound.size()-1;
-
-					 	}
-					 	else 
-					 	{
-					 		int addPointer = 0;
-					 		if(dis2 >= dis1)
-					 			addPointer = 0;
-					 		else 
-					 			addPointer = 1;
-					 		//create new cluster
-					 		cluster s(start,end,_clustersFound.size());
-					 		//add distance to new cluster
-	
-							s.dis_cluster_start_end.push_back(min(dis1,dis2));
-							//add posiinfo to new cluster
-							s.positionserial.push_back(*(_clustersFound[nearest_cluster[0]].positionserial.begin()+addPointer));
-							s.positionserial.push_back(fullLoopInfo);
-
-							//add new cluster to _clustersFound
-							_clustersFound.push_back(s);
-							// //delete old position infor and dis info from old cluster
-							// cout<<"_clustersFound[nearest_cluster[0]].positionserial.size: "<<_clustersFound[nearest_cluster[0]].positionserial.size()<<endl;
-							// cout<<"_clustersFound[nearest_cluster[0]].dis_cluster_start_end.size: "<<
-							// 	_clustersFound[nearest_cluster[0]].dis_cluster_start_end.size()<<endl;
-							//set LC and ID map
-							clusterIDtoLoopsMap[_clustersFound.size()-1].insert(*it);
-							loopToClusterIDMap[*it] = _clustersFound.size()-1;
-							//handle the ID and LC map of another loop 
-							std::pair<int,int> tochange;
-							int startID = (*(_clustersFound[nearest_cluster[0]].positionserial.begin()+addPointer))[0];
-							int endID = (*(_clustersFound[nearest_cluster[0]].positionserial.begin()+addPointer))[3];
-							tochange.first = startID;
-							tochange.second = endID;
-							//delete the last two elements in positionserial and two all elements in dis_serial
-							_clustersFound[nearest_cluster[0]].positionserial.erase(_clustersFound[nearest_cluster[0]].positionserial.begin()+addPointer);
-							_clustersFound[nearest_cluster[0]].dis_cluster_start_end.pop_back();
-							if(_clustersFound[nearest_cluster[0]].dis_cluster_start_end.size() != 0 or 
-								_clustersFound[nearest_cluster[0]].positionserial.size() != 1)
-							{
-								printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
-								exit(0);
-							}							//debug
-							// std::array<double,6> mammamlai;
-							// mammamlai = (*(_clustersFound[nearest_cluster[0]].positionserial.end()-2));
-							// cout<<mammamlai[0]<<" "<<mammamlai[1]<<" "<<mammamlai[2]<<endl;
-							// cout<<"nearest_cluster:"<<nearest_cluster[0]<<" "<<nearest_cluster[1]<<endl;
-							// cout<<"higher id:"<<startID<<" "<<endID<<endl;
-
-							if(clusterIDtoLoopsMap[nearest_cluster[0]].count(tochange))
-							{
-								clusterIDtoLoopsMap[nearest_cluster[0]].erase(tochange);
-								clusterIDtoLoopsMap[_clustersFound.size()-1].insert(tochange);
-								//need to chage: delete map from loop to cluster ID
-								loopToClusterIDMap[tochange] = _clustersFound.size()-1;
-								cout<<"1 loop "<< tochange.first<<" and "<<tochange.second<<"to cluster id map: "<<
-									loopToClusterIDMap[tochange]<<endl;		
-							}
-							else
-							{
-								tochange.first = endID;
-								tochange.second = startID;
-								
-								cout<<"2 else  loop "<< tochange.first<<" and "<<tochange.second<<"to cluster id map: "<<
-									loopToClusterIDMap[tochange]<<endl;
-	
-							    for(std::set<std::pair<int,int >>::iterator it = clusterIDtoLoopsMap[0].begin();
-							    	it!=clusterIDtoLoopsMap[0].end();it++)  
-							    {  
-							            cout << (*it).first <<" "<< (*it).second << "}\n";  
-							    } 
-
-								if(!clusterIDtoLoopsMap[nearest_cluster[0]].count(tochange))
-								{
-									cout<<"can't find the previous loop in mapset"<<endl;
-									cout<<"id:"<<startID<<" "<<endID<<endl;
-									cout<<clusterIDtoLoopsMap[nearest_cluster[0]].size()<<endl;
-									cout<<"total cluster size:"<<_clustersFound.size()<<endl;
-									exit(0);
-								}
-								clusterIDtoLoopsMap[nearest_cluster[0]].erase(tochange);
-								clusterIDtoLoopsMap[_clustersFound.size()-1].insert(tochange);
-								loopToClusterIDMap[tochange] = _clustersFound.size()-1;
-
-							}
-						}
-							// _clustersFound[nearest_cluster[0]].dis_cluster_start_end.size();
-					 }
-					 
+					_clustersFound.push_back(s);
+/*					cout<<"fullLoopInfo: "<<s.positionserial[0][0]<<" "<<s.positionserial[0][1]<<" "
+						<<s.positionserial[0][2]<<" "<<s.positionserial[0][3]<<
+						" "<<s.positionserial[0][4]<<" "<<s.positionserial[0][5]<<endl;*/
+					clusterIDtoLoopsMap[_clustersFound.size()-1].insert(*it);
+					loopToClusterIDMap[*it] = _clustersFound.size()-1;
 				}
-								
+				//find one constent cluster, add the loop to it
+				else if (cons_cluster_number.size() == 1)
+				{
+					cout<<" consistent cluster: "<<cons_cluster_number[0]<<endl;
 
+					sleep(2);
+					int consCluster_serialNum = cons_cluster_number[0];
+					_clustersFound[consCluster_serialNum].positionserial.push_back(fullLoopInfo);
+
+					clusterIDtoLoopsMap[consCluster_serialNum].insert(*it);
+					loopToClusterIDMap[*it] = consCluster_serialNum;
+				}
+				//find more than one consistent cluster
+				else 
+				{
+					cout<<"consistent more than one cluster that is consistent to the test loop"<<endl;
+					printf("This fake error is in %s on line %d\n",  __FILE__, __LINE__);
+					exit(0);
+				}					
 			}
-
-
-
 		}
-
 		//merge cluster
 // exit(0);
-		ofstream fileStream;  
-		
-
-		std::vector<std::vector<int> > consistent_pair_clusterr_real;
-		consistent_pair_clusterr_real.clear();
-		std::vector<std::vector<std::pair<double, int> > > nearest_dis_sequence;
-		detect_cluster_merge(_clustersFound, consistent_pair_clusterr_real, nearest_dis_sequence, thres);
-		cout<<"information about cluster to merge: \n"<<endl;
-		fileStream.open("pairs of clusters to merge.txt",ios::trunc);
-		for(int i = 0; i < consistent_pair_clusterr_real.size(); i++)
-		{
-			cout<<"cluster["<<i<<"]"<<"  consistent_pair_clusterr_real[i].size(): "<<consistent_pair_clusterr_real[i].size()<<endl;;
-		}
-		for(int i = 0; i < consistent_pair_clusterr_real.size(); i++)
-		{
-			cout<<" "<<endl;
-			cout<<" "<<endl;
-			if(consistent_pair_clusterr_real[i].size() > 0)
-			{
-								
-				int cy;
-				fileStream<<i<<"  ";
-
-				cout<<"cluster["<<i<<"]"<<"'s potential merge cluster: "<<" ";
-				for(std::vector<int>::const_iterator itVertex = consistent_pair_clusterr_real[i].begin(), 
-					lendVertex = consistent_pair_clusterr_real[i].end();itVertex!=lendVertex;itVertex++)
-				{
-					cy = *itVertex;
-					fileStream<<cy<<"  ";
-					cout<<cy<<"  ";
-				}	
-				cout<<endl;
-				cout<<" "<<endl;
-				cout<<"cluster["<<i<<"]"<<"'s nearest cluster sequence: "<<" ";
-				for(std::vector<std::pair<double, int> >::const_iterator itVertex = nearest_dis_sequence[i].begin(), 
-					lendVertex = nearest_dis_sequence[i].end();itVertex!=lendVertex;itVertex++)
-				{
-					cout<<(*itVertex).second<<"  ";
-				}	
-				cout<<endl;
-			}
-			fileStream<<"\n";
-		}
-		
-		fileStream.close();
-		//store file
-		merge_cluster( consistent_pair_clusterr_real);
-
-		// exit(0);
-
 		std::array<double,6> ty={1,1,1,1,1,1};
 
 		// fileStream.open("clusterFile.g2o",ios::trunc);
 		ofstream fileStreamr; 
 		fileStreamr.open(nameofclusterfile,ios::trunc);
-
+		// cout<<"clusters:"<<endl;
 		for(size_t i=0; i< _clustersFound.size(); i++)
 		{
+
 			for(std::vector<std::array<double,6>>::const_iterator itVertex = _clustersFound[i].positionserial.begin(), 
 				lendVertex = _clustersFound[i].positionserial.end();itVertex!=lendVertex;itVertex++)
 			{
 				ty = *itVertex;
 
 				fileStreamr<<i<<"  "<<ty[0]<<"  "<<ty[1]<<"  "<<ty[2]<<"  "<<ty[3]<<"  "<<ty[4]<<"  "<<ty[5]<<"\n";
+
 				// fileStream<<trystdarray[0]<<"\n";
 			}	
 		}
 		fileStreamr.close();
 		cout<<"origianl cluster file has been saved"<<endl;
-
-		//consistency check
-		bool ready_2_intra;
-		ready_2_intra = get_cluster_node_scequence( node_sequence, _clustersFound, merge_vector);
-		if(ready_2_intra)
-		{
-			cal_seg_taransform_se2(node_sequence, OdoInf, transSequence_whole);
-		}
-		intra_loop_pair_consistency_test(node_sequence, transSequence_whole, _clustersFound);
-
-
-
-		inter_cons_check(consistent_pair_clusterr_real, transSequence_whole);
 
 		
 		exit(0);
@@ -1279,8 +722,8 @@ public:
 	
 // 	 */
 
-	int collect_vertexAndLP(const char* filename, std::map<std::pair<int, int>, std::map<std::pair<int, int>, std::array<double,6>> &LC_Inf,
-		std::pair<g2o::SE2, Matrix3d> >	&LP_Trans_Covar_Map)
+	int collect_vertexAndLP(const char* filename, std::map<std::pair<int, int>, std::array<double,6> > &LC_Inf,
+		std::map<std::pair<int, int>, std::pair<g2o::SE2, Matrix3d> >	& LP_Trans_Covar_Map)
 	{
 
 		ifstream fileStream;  
@@ -1339,7 +782,7 @@ public:
 			    					break;
 			    			}
 			    		}
-			    		count++; 
+			    	
 			    		VertexInf.push_back(verT);
 			    		// cout<<verT[0]<<" "<<verT[1]<<" "<<verT[2]<<" "<<verT[3]<<endl;
 			    		// cout<<VertexInf.size()<<endl;
@@ -1415,26 +858,29 @@ public:
 			    				}
 			    			}
 			    		}
-			    		count++; 
+			    		
 			    		if(odobit)
 			    			OdoInf.push_back(odoedge_element);
 			    		else
 			    		{
+			    			count++; 
 			    			LC_Inf[lc_vertex_pair] = lcedge_element;
 				    		cout<<lc_vertex_pair.first<<" "<<lc_vertex_pair.second<<" "<<lcedge_element[0]<<" "
 				    			<<lcedge_element[1]<<" "<<lcedge_element[2]<<" "<<lcedge_element[3]<<" "<<lcedge_element[4]<<" "
 			    				<<lcedge_element[5]<<endl;	
 
 							Matrix3d m1 = Matrix3d::Identity();
-							std::array<double, 3> mid_vector3;
-							m1(0,0 )= 1.0/loop_edge[3]; 
-							m1(1,1)= 1.0/loop_edge[4]; 
-							m1(2,2) = 1.0/loop_edge[5];
+							g2o::Vector3 mid_vector3; 
+							g2o::SE2 edge1;
 
-							mid_vector3[0] = loop_edge[0];
-							mid_vector3[1] = loop_edge[1];
-							mid_vector3[2] = loop_edge[2];
-							g2o::SE2 edge1.fromVector(mid_vector3);
+							m1(0,0 )= 1.0/lcedge_element[3]; 
+							m1(1,1)= 1.0/lcedge_element[4]; 
+							m1(2,2) = 1.0/lcedge_element[5];
+
+							mid_vector3[0] = lcedge_element[0];
+							mid_vector3[1] = lcedge_element[1];
+							mid_vector3[2] = lcedge_element[2];
+							edge1.fromVector(mid_vector3);
 
 							ele_lp_trans_covar.first  = edge1;
 							ele_lp_trans_covar.second = m1;
@@ -1484,192 +930,12 @@ public:
 		}  
 	}
 
-
-	void cal_seg_taransform_se2(std::vector<std::vector< std::vector<int> > > & node_sequence, std::vector<std::array<double,8>> & OdoInf, 
-		std::vector<std::vector<std::vector<std::pair<g2o::SE2, Matrix3d> > > > &transSequence_whole)
-	{
-
-		g2o::SE2 edge1, edge2, edge0;
-		g2o::Vector3 mid_vector3;
-		std::pair<int, int> seg_pair;
-		std::pair<g2o::SE2, Matrix3d> transSeg;
-		std::vector<std::pair<g2o::SE2, Matrix3d> > transSequence;
-		std::vector<std::vector<std::pair<g2o::SE2, Matrix3d> > > transSequence_l;
-		Matrix3d m = Matrix3d::Identity();  
-		bool sequence_first_2_second;
-		int from, to;
-		std::array<double, 8> odometryedge_1, odometryedge_2;
-		std::array<double, 6> loop_edge;
-
-
-		transSequence_whole.clear();
-		for(int iii = 0; iii < node_sequence.size(); iii++)
-		{
-			vector<int>::iterator iter=find(killed_cluster.begin(),killed_cluster.end(),iii);
-			if(iter != killed_cluster.end())
-			{
-				transSequence_l.clear();
-				transSequence_whole.push_back(transSequence_l);
-				continue;
-			}
-
-			transSequence_l.clear();
-			for(int ii = 0; ii<2; ii++)
-			{
-				transSequence.clear();
-				int to_compar = 0;
-				if(node_sequence[iii][ii].size() >= 1)
-					to_compar = node_sequence[iii][ii].size()-1;
-				else
-				{
-
-			    	printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-					exit(0);
-				}
-				
-				for(int i = 0; i < to_compar; i++)
-				{
-					seg_pair.first = node_sequence[iii][ii][i];
-					seg_pair.second = node_sequence[iii][ii][i+1];
-					if(seg_pair.first < seg_pair.second)
-					{
-						sequence_first_2_second = 1;
-						from = seg_pair.first;
-						to = seg_pair.second;
-					}
-					else
-					{
-						sequence_first_2_second = 0;
-						from = seg_pair.second ;
-						to = seg_pair.first;
-					}
-					int odo_size = to - from;
-					if(odo_size < 1)// if the adjacent nodes are the same one, set the transfrom matrix to zero and covariance  to zero
-					{
-						m = Matrix3d::Identity(); 
-						mid_vector3[0] = 0;mid_vector3[1] = 0;mid_vector3[2] = 0;
-						edge0.fromVector(mid_vector3);
-						m(0,0)= 0; m(1,1)= 0; m(2,2) = 0;
-						if(sequence_first_2_second == 0)
-							transSeg.first = edge0.inverse();
-						else
-							transSeg.first = edge0;
-						transSeg.second = m;
-						transSequence.push_back(transSeg);
-						// cout<<"to: "<<to<<endl;
-						// cout<<"from: "<<from<<endl;
-					 //    printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-						// exit(0);		
-					}
-					else if(odo_size == 1)
-					{
-						m = Matrix3d::Identity(); 
-						mid_vector3[0] = OdoInf[from][2];mid_vector3[1] = OdoInf[from][3];mid_vector3[2] = OdoInf[from][4];
-						edge0.fromVector(mid_vector3);
-						m(0,0)= 1.0/OdoInf[from][5]; m(1,1)= 1.0/OdoInf[from][6]; m(2,2) = 1.0/OdoInf[from][7];
-						if(sequence_first_2_second == 0)
-							transSeg.first = edge0.inverse();
-						else
-							transSeg.first = edge0;
-						transSeg.second = m;
-						transSequence.push_back(transSeg);
-					}
-					else
-					{
-						Matrix3d m1 = Matrix3d::Identity(),  m2 = Matrix3d::Identity(), m_m, J1, J2;
-						m1(0,0 )= 1.0/OdoInf[from][5]; m1(1,1)= 1.0/OdoInf[from][6]; m1(2,2) = 1.0/OdoInf[from][7];
-						mid_vector3[0] = OdoInf[from][2];mid_vector3[1] = OdoInf[from][3];mid_vector3[2] = OdoInf[from][4];
-						edge1.fromVector(mid_vector3);
-
-						for(int j=from+1; j<to; j++)
-						{
-							m2(0,0 ) = 1.0/OdoInf[j][5]; m2(1,1) = 1.0/OdoInf[j][6]; m2(2,2) = 1.0/OdoInf[j][7];
-							mid_vector3[0] = OdoInf[j][2]; mid_vector3[1] = OdoInf[j][3]; mid_vector3[2] = OdoInf[j][4];
-							edge2.fromVector(mid_vector3);
-
-							Jacobian_4_edge_propagate(edge1, edge2, J1, J2);
-							covariance_propagate(m1, m2, J1, J2, m_m);
-							m1 = m_m;
-
-							edge1 *= edge2;//update transform
-						}
-						if(sequence_first_2_second == 0)
-							transSeg.first = edge1.inverse();
-						else
-							transSeg.first = edge1;
-						transSeg.second = m1;
-						transSequence.push_back(transSeg);// node level
-						// cout<<seg_pair.first<<" "<<seg_pair.second<<endl;
-						// cout<<m1<<endl;
-		     		}
-				}
-
-				transSequence_l.push_back(transSequence);	//cluster level	
-				if(ii == 1)
-				{
-					std::pair<int, int> lppair;
-
-					
-					if(node_sequence[iii][0].size() != node_sequence[iii][1].size())//start node length should equal to end node length
-					{
-						    printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-							exit(0);
-					}
-					if(node_sequence[iii][0].size() >= 1)//if the cluster only has one loop
-					{
-						transSequence.clear();
-						if((node_sequence[iii][0].size() == 1) and (transSequence.size() != 0))
-						{
-							printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-							exit(0);
-						}
-						// cout<<"transSequence_l.size: "<<transSequence_l.size()<<endl;
-						// exit(0);
-
-						for(int lllpc=0; lllpc < node_sequence[iii][0].size(); lllpc++)
-						{
-							
-							lppair.first = node_sequence[iii][0][lllpc];
-							lppair.second = node_sequence[iii][1][lllpc];
-							
-							loop_edge = LC_Inf[lppair];
-
-							Matrix3d m1 = Matrix3d::Identity();
-							m1(0,0 )= 1.0/loop_edge[3]; m1(1,1)= 1.0/loop_edge[4]; m1(2,2) = 1.0/loop_edge[5];
-							mid_vector3[0] = loop_edge[0];mid_vector3[1] = loop_edge[1];mid_vector3[2] = loop_edge[2];
-							edge1.fromVector(mid_vector3);
-							transSeg.first = edge1;
-							transSeg.second = m1;
-							// cout<<"m covariance: "<<m1<<endl;
-							// cout<<edge1.toVector()<<endl;
-
-							transSequence.push_back(transSeg);							
-						}
-						transSequence_l.push_back(transSequence);
-					}
-					else
-					{
-							printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-							exit(0);
-					}
-					// cout<<"iii: "<<iii<<endl;
-					// cout<<"transSequence_l[0].size: "<<transSequence_l[0].size()<<endl;
-					// cout<<"transSequence_l[1].size: "<<transSequence_l[1].size()<<endl;
-					// cout<<"transSequence_l[2].size: "<<transSequence_l[2].size()<<endl;
-					// cout<<"node_sequence[iii][0].size(): "<<node_sequence[iii][0].size()<<endl;
-					// cout<<"node_sequence[iii][1].size(): "<<node_sequence[iii][1].size()<<endl;
-				}
-			}
-			transSequence_whole.push_back(transSequence_l); //all clusters level
-		}
-		// exit(0);
-	}
 	//input: the start and end node serial number correspond to the segment you want to synthesize
 	//output: the tranform and covariance info of the synthesized segment, in Trans and cov
 	void synthesize_odo_edges(int start, int end, std::vector<std::array<double,8>> & OdoInf, g2o::SE2 & Trans, Matrix3d & cov)
 	{
 		std::array<double,8> startNodeInfo = OdoInf[start];
-		std::array<double,3>  mid_vector3;
+		g2o::Vector3  mid_vector3;
 		Matrix3d m_m, m2, J1, J2;
 		g2o::SE2 edge2;
 		int lengthNode = end -start;
@@ -1682,7 +948,7 @@ public:
 			exit(0);
 		}
 		cov = Matrix3d::Identity(); 
-		else if(lengthNode == 0){
+		if(lengthNode == 0){
 			cov(0,0)= 0; cov(1,1)= 0; cov(2,2) = 0;
 			mid_vector3[0] = 0;mid_vector3[1] = 0;mid_vector3[2] = 0;
 			Trans.fromVector(mid_vector3);
@@ -1713,7 +979,7 @@ public:
 
 				Trans *= edge2;//update transform
 			}
-			if(OdoInf[j-1] != end)
+			if(OdoInf[j-1][1] != end)
 			{
 				printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
 				exit(0);
@@ -1845,253 +1111,10 @@ public:
 
 	}	
 
-		
-	void intra_loop_pair_consistency_test(std::vector<std::vector< std::vector<int> > >  & node_sequence,
-		std::vector<std::vector<std::vector<std::pair<g2o::SE2, Matrix3d> > > > & transSequence_whole, 
-		std::vector<cluster> & _clustersFound)
-	{	
-
-		std::pair<int,double> ele_intra_pair;
-		std::vector <std::pair<int,double> > ele_intra_group;
-		int increase_uncer = 0;
-		std::pair<int,int > uncert_pair;
-		std::vector<int > inc;
-		for(int i = 0; i < _clustersFound.size(); i++)
-		{
-			increase_uncer = 0;
-			_clustersFound[i].uncert_pair_group.clear();
-			//basic check
-			vector<int>::iterator iter=find(killed_cluster.begin(),killed_cluster.end(),i);
-			if(iter != killed_cluster.end())
-			{
-				inc.push_back(0);
-				continue;
-			}
-			if((_clustersFound[i].positionserial.size() != node_sequence[i][0].size()) )
-			{
-				cout<<"_clustersFound.size(): "<<_clustersFound.size()<<endl;
-				cout<<"node_sequence.size(): "<<node_sequence.size()<<endl;
-
-				cout<<"i: "<<i<<" positionserial.size: "<<_clustersFound[i].positionserial.size()<<" node size: "<<node_sequence[i][0].size()<<endl;
-					printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-					exit(0);
-			}
-			if((node_sequence[i][0].size() != node_sequence[i][1].size()) )
-			{
-					printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-					exit(0);
-			}
-			if(	((_clustersFound[i].positionserial.size()-1) != transSequence_whole[i][0].size()) )
-			{
-				cout<<"i: "<<i<<endl;
-				cout<<"_clustersFound[i].positionserial.size(): "<<_clustersFound[i].positionserial.size()<<endl;
-				cout<<"transSequence_whole[i][0].size: "<<transSequence_whole[i][0].size()<<endl;
-				cout<<"transSequence_whole.size: "<<transSequence_whole.size()<<endl;
-				cout<<"_clustersFound.size(): "<<_clustersFound.size()<<endl;
-				cout<<"node_sequence.size(): "<<node_sequence.size()<<endl;
-				cout<<"killed_cluster.size(): "<<killed_cluster.size()<<endl;
-					printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-					exit(0);
-			}
-			if(	(transSequence_whole[i][0].size() != transSequence_whole[i][2].size()-1))
-			{
-					printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-					exit(0);
-			}
-
-			_clustersFound[i].consistentGroup.clear();
-			ele_intra_group.clear();			
-
-			if(_clustersFound[i].positionserial.size() == 0)
-			{
-					printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-					exit(0);
-			}
-			for(int secondFor = 0; secondFor < _clustersFound[i].positionserial.size(); secondFor++)
-			{
-
-				if(_clustersFound[i].consistentGroup.size() ==0)
-				{
-					if(secondFor != 0)
-					{
-						printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-						exit(0);	
-					}
-					ele_intra_group.clear();
-					ele_intra_pair.first = secondFor;
-					ele_intra_pair.second = 0;
-					ele_intra_group.push_back(ele_intra_pair);
-					_clustersFound[i].consistentGroup.push_back(ele_intra_group);
-				}
-				else 
-				{
-					int num_cons_group = 0;
-					std::vector<std::pair<int, double> > cons_group,uncertain_check;//uncertain_check only used for display when degbug
-					std::vector<int > mess;
-					std::pair<int,int> check;
-					cons_group.clear();
-					std::vector<int> processed;
-					std::pair<bool, double> consistent2Group;
-					for(int thirdFor = 0; thirdFor < _clustersFound[i].consistentGroup.size(); thirdFor++)
-					{
-						std::vector<int>::iterator iter=find(processed.begin(),processed.end(),_clustersFound[i].consistentGroup[thirdFor].back().first);
-						if(iter != processed.end())
-						{
-							if(_clustersFound[i].consistentGroup.size() < 2)
-							{
-							printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-							exit(0);
-							}	
-							cout<<"_clustersFound[i].consistentGroup.size(): "<<_clustersFound[i].consistentGroup.size()<<endl;	
-							consistent2Group = check_single_loop(secondFor,_clustersFound[i], 
-							_clustersFound[i].consistentGroup[thirdFor][_clustersFound[i].consistentGroup[thirdFor].size()-2].first,transSequence_whole[i], i, thirdFor);
-						}
-						else
-						{
-							consistent2Group = check_single_loop(secondFor,_clustersFound[i], 
-							_clustersFound[i].consistentGroup[thirdFor].back().first,transSequence_whole[i], i, thirdFor);
-							processed.push_back(_clustersFound[i].consistentGroup[thirdFor].back().first);
-						}
-
-						if(consistent2Group.first)
-						{
-							num_cons_group = num_cons_group+1;
-
-							ele_intra_pair.first = thirdFor;
-							ele_intra_pair.second = consistent2Group.second;
-
-							cons_group.push_back(ele_intra_pair);	
-							uncertain_check.push_back(consistent2Group)	;	
-						}
-						else if(consistent2Group.second < 20)//11.34
-						{
-
-							if(_clustersFound[i].consistentGroup[thirdFor].size() > 1)
-							{
-								for(int uncer=0; uncer < _clustersFound[i].consistentGroup[thirdFor].size()-1; uncer++)
-								{
-									consistent2Group = check_single_loop(secondFor,_clustersFound[i], 
-										_clustersFound[i].consistentGroup[thirdFor][uncer].first,transSequence_whole[i], i, thirdFor);
-									uncertain_check.push_back(consistent2Group)	;
-									if(consistent2Group.second < 7.81)
-									{
-										num_cons_group = num_cons_group+1;
-
-										ele_intra_pair.first = thirdFor;
-										ele_intra_pair.second = consistent2Group.second;
-										cons_group.push_back(ele_intra_pair);	
-										break;
-									}
-								}
-								// cout<<"uncertain check:"<<endl;
-								// for(int uncer=0; uncer < uncertain_check.size(); uncer++)
-								// {
-								// 	cout<<" "<<uncertain_check[uncer].second;
-								// }
-								// printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-								// exit(0);	
-							}
-							else
-							{
-								//label this uncertain one loop, for further verify 
-								uncert_pair.first = thirdFor;
-								uncert_pair.first = thirdFor+1;
-								_clustersFound[i].uncert_pair_group.push_back(uncert_pair);
-							}
-							
-						} 
-					}
-					if(cons_group.size() != num_cons_group)
-					{
-						printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-						exit(0);
-					}
-					if(num_cons_group == 0)
-					{
-						ele_intra_group.clear();
-						ele_intra_pair.first = secondFor;
-						ele_intra_pair.second = 0;
-						ele_intra_group.push_back(ele_intra_pair);
-						_clustersFound[i].consistentGroup.push_back(ele_intra_group);
-					}
-					else if(num_cons_group == 1)
-					{
-						ele_intra_pair.first = secondFor;
-						ele_intra_pair.second = cons_group[0].second;
-						_clustersFound[i].consistentGroup[cons_group[0].first].push_back(ele_intra_pair);
-					}
-					else
-					{
-						for(int twoCons = 0; twoCons < _clustersFound[i].consistentGroup.size(); twoCons++)
-						{
-							cout<<"cluster "<<i <<", group "<<twoCons<<endl;
-							for(int each_con_group = 0; each_con_group < _clustersFound[i].consistentGroup[twoCons].size(); each_con_group++)
-								cout<<_clustersFound[i].consistentGroup[twoCons][each_con_group].first<<" ";
-							cout<<endl;
-							for(int each_con_group = 0; each_con_group < _clustersFound[i].consistentGroup[twoCons].size(); each_con_group++)
-								cout<<_clustersFound[i].consistentGroup[twoCons][each_con_group].second<<" ";
-							cout<<endl;	
-						}
-						cout<<"num_cons_group: "<<num_cons_group<<endl;
-								cout<<"uncertain check statis:"<<endl;
-								for(int uncer=0; uncer < uncertain_check.size(); uncer++)
-								{
-									cout<<"group: "<< uncertain_check[uncer].first<<" statis: "<<uncertain_check[uncer].second<<endl;
-								}
-						// printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-						// exit(0);
-						for(int assign_multi_cons_group = 0; assign_multi_cons_group < cons_group.size(); assign_multi_cons_group++)
-						{
-							ele_intra_pair.first = secondFor;
-							ele_intra_pair.second = cons_group[assign_multi_cons_group].second;
-							_clustersFound[i].consistentGroup[cons_group[assign_multi_cons_group].first].push_back(ele_intra_pair);	
-						}
-						increase_uncer = increase_uncer + cons_group.size() -1;
-
-					}
-				}
-
-			}
-			inc.push_back(increase_uncer);
-		}
-		//check to make sure total numbers of elements in  groups belongs to the same cluster equal to the loop numbers in the cluster 
-		if(inc.size() != _clustersFound.size())
-		{
-			if(inc.size() != _clustersFound.size()-killed_cluster.size())
-			{
-				printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-				exit(0);
-			}
-
-		}
-		for(int i = 0; i < _clustersFound.size(); i++)
-		{
-			vector<int>::iterator iter=find(killed_cluster.begin(),killed_cluster.end(),i);
-			if(iter != killed_cluster.end())
-			{
-				continue;
-			}
-			int sumss=0;
-			cout<<" "<<endl;
-			cout<<"cluster["<<i<<"]"<<" has "<<_clustersFound[i].positionserial.size()<<" loops"<<endl;
-			cout<<"which contains "<<_clustersFound[i].consistentGroup.size()<<" consistent groups."<<endl;
-			for(int j=0; j < _clustersFound[i].consistentGroup.size(); j++)
-			{
-				cout<<"group["<<j<<"]"<<" has "<<_clustersFound[i].consistentGroup[j].size()<<" loops"<<endl;
-				sumss = sumss+_clustersFound[i].consistentGroup[j].size();
-			}
-			if(sumss-inc[i] != _clustersFound[i].positionserial.size())
-			{
-				cout<<"sumss: "<<sumss<<" increase_uncer: "<<" positionserial.size: "<<endl;
-				printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-				exit(0);
-			}
-		}
-
-	}
 //input is four pair<transform, covariance> of two loop and two odo edge segments
 //return is one pair<pass_check_or_not, transfrom_distance>
-	std::pair<bool, double> check_single_loop_inter(std::array<std::pair<g2o::SE2, Matrix3d>, 4 > &transSequence_cluster_inter)//, double& statis
+	std::pair<bool, double> check_single_loop_inter(std::array<std::pair<g2o::SE2, Matrix3d>, 4 > &transSequence_cluster_inter, 
+	double& covX, double & covY, Matrix3d & displayCov,double & transX_residual, double & transY_residual, double & transA_residual)//, double& statis
 	{
 		g2o::SE2 loop1, loop2, Edge_midd;
 		Matrix3d Cov1, Cov2, Cov_midd, J1, J2;
@@ -2112,15 +1135,20 @@ public:
 			loop1 = loop1 * loop2;//update transform
 		}
 		displayCov = Cov1;
+		covX = Cov1(0, 0);
+		covY = Cov1(1, 1);
 		// T = transform_interator.toVector();
 		Matrix3d mmmm =  Cov1.inverse();
 		T(0)= loop1[0];
 		T(1) = loop1[1];
 		T(2) = loop1[2];	
 		T_inverse(0) = T(0) * mmmm(0,0) + T(1) * mmmm(1,0) + T(2) * mmmm(2,0);	
-		T_inverse(1) = T(1) * mmmm(0,1) + T(1) * mmmm(1,1) + T(2) * mmmm(2,1);
-		T_inverse(2) = T(2) * mmmm(0,2) + T(1) * mmmm(1,2) + T(2) * mmmm(2,2);
+		T_inverse(1) = T(0) * mmmm(0,1) + T(1) * mmmm(1,1) + T(2) * mmmm(2,1);
+		T_inverse(2) = T(0) * mmmm(0,2) + T(1) * mmmm(1,2) + T(2) * mmmm(2,2);
 		double transformDistance = T_inverse(0)*T(0) + T_inverse(1)*T(1) + T_inverse(2)*T(2);
+		transX_residual = T(0);
+		transY_residual = T(1);
+		transA_residual = T(2);
 
 		// double transformDistance = (T *) * T_inverse;
 		// double transformDistance = T(0)*T(0)/Cov_interator(0,0) +  T(1)*T(1)/Cov_interator(1,1) +  T(2)*T(2)/Cov_interator(2,2);
@@ -2142,372 +1170,9 @@ public:
 	void inter_cons_check(std::vector<std::vector<int> > & consistent_pair_clusterr_real, 
 		std::vector<std::vector<std::vector<std::pair<g2o::SE2, Matrix3d> >  > > &transSequence_cluster)
 	{
-		std::vector<std::vector<std::pair<std::pair<int,int>, std::pair<int, std::vector<int> > > > > final_cons_group_whole;
-		std::vector<std::pair<std::pair<int,int>, std::pair<int, std::vector<int> > > > final_cons_group;
-		std::pair<int, std::vector<int> > consistent_in_next_cluster;
-		std::pair<int,int> current_culsterID_groupID;
-		std::pair<std::pair<int,int>, std::pair<int, std::vector<int> > > ele_of_final;
-
-		std::vector<std::vector<std::pair<int,int> > > nodessequence2inter, nodessequence2inter_start;
-		std::pair<int,int> loopNode;
-		std::pair<bool, double> retuValue;
-		std::vector<std::pair<int,int> > cluster_group_node, cluster_group_node_start;
-		std::array<std::pair<g2o::SE2, Matrix3d>, 2 >  transSequence;
-		std::array<int,4> nodes;
-		std::array<std::pair<g2o::SE2, Matrix3d>, 4 >  transSequence_cluster_inter;
-
-		cout<<"start of segmentation fault"<<endl;
-		for(int i = 0; i < merge_vector.size(); i++)
-		{
-			cout<<" 111 "<<endl;
-			cluster_group_node.clear();
-			cluster_group_node_start.clear();
-			cout<<" i: "<<i<<endl;
-			cout<<"consistent_pair_clusterr_real.size: "<<merge_vector.size()<<endl;
-			cout<<"consistent_pair_clusterr_real[i].size: "<<merge_vector[i].size()<<endl;
-			int clusterID = merge_vector[i][0];//
-			cout<<" clusterID: "<<clusterID<<endl;
-			for(int j=0; j<_clustersFound[clusterID].consistentGroup.size(); j++)
-			{
-				cout<<" j: "<<j<<endl;
-				int id4loop = _clustersFound[clusterID].consistentGroup[j].back().first;
-				cout<<" id4loop: "<<id4loop<<endl;
-				loopNode.first = _clustersFound[clusterID].positionserial[id4loop][0];
-				loopNode.second = _clustersFound[clusterID].positionserial[id4loop][3];
-				cluster_group_node.push_back(loopNode);
-
-				id4loop = _clustersFound[clusterID].consistentGroup[j][0].first;
-				loopNode.first = _clustersFound[clusterID].positionserial[id4loop][0];
-				loopNode.second = _clustersFound[clusterID].positionserial[id4loop][3];
-				cluster_group_node_start.push_back(loopNode);
-			}
-			nodessequence2inter.push_back(cluster_group_node);
-			nodessequence2inter_start.push_back(cluster_group_node);
-		}
-		// exit(0);
-
-		for(int i = 0; i < nodessequence2inter.size()-1; i++)
-		{
-			int clusterID = merge_vector[i][0];
-			int nextClusterID = merge_vector[i+1][0];
-
-			for(int j=0; j<_clustersFound[clusterID].consistentGroup.size(); j++)//get the information of the current cluster's consistent group's last node
-			{
-				current_culsterID_groupID.first  = clusterID ;
-				current_culsterID_groupID.second = j;
-				consistent_in_next_cluster.second.clear();
-				nextClusterID = merge_vector[i+1][0];
-				consistent_in_next_cluster.first = nextClusterID;
-				int loopID = _clustersFound[clusterID].consistentGroup[j].back().first;
-
-				int node_loop1_start = nodessequence2inter[i][j].first;
-				int node_loop1_end   = nodessequence2inter[i][j].second;
-				int node_loop2_start = 0;
-				int node_loop2_end   = 0;
-				transSequence_cluster_inter[0].first = transSequence_cluster[clusterID][2][loopID].first;
-				transSequence_cluster_inter[0].second = transSequence_cluster[clusterID][2][loopID].second;
-
-				for(int k=0; k <_clustersFound[nextClusterID].consistentGroup.size(); k++)//get the information of the next cluster's consistent group's first node
-				{
-					node_loop2_start = nodessequence2inter_start[i+1][k].first;
-					node_loop2_end   = nodessequence2inter_start[i+1][k].second;
-					nodes[0] = node_loop1_start;
-					nodes[1] = node_loop1_end;
-					nodes[2] = node_loop2_start;
-					nodes[3] = node_loop2_end;
-
-					cal_odo_seg(nodes, transSequence);
-
-					int loopID2 = _clustersFound[nextClusterID].consistentGroup[k][0].first;
-					transSequence_cluster_inter[1] = transSequence[1];
-					transSequence_cluster_inter[2].first  = transSequence_cluster[nextClusterID][2][loopID2].first.inverse();
-					transSequence_cluster_inter[2].second = transSequence_cluster[nextClusterID][2][loopID2].second;
-					transSequence_cluster_inter[3].first  = transSequence[0].first.inverse();
-					transSequence_cluster_inter[3].second = transSequence[0].second;
-
-					retuValue = check_single_loop_inter(transSequence_cluster_inter);
-
-					if(retuValue.first == 1)
-					{
-						consistent_in_next_cluster.first  = nextClusterID;//the cluster id of the next one
-						consistent_in_next_cluster.second.push_back(k);// = k;
-						cout<<"displayCov diagnal: "<<endl<<displayCov<<endl;
-					}
-					else if(retuValue.second <= 30)
-					{
-				
-						if(_clustersFound[clusterID].consistentGroup[j].size() > 1)
-						{
-							int size    =   _clustersFound[clusterID].consistentGroup[j].size() - 2;
-							int id4loop =  _clustersFound[clusterID].consistentGroup[j][size].first;
-
-							nodes[0] = _clustersFound[clusterID].positionserial[id4loop][0];
-							nodes[1] = _clustersFound[clusterID].positionserial[id4loop][3];
-							cal_odo_seg(nodes, transSequence);
-
-							transSequence_cluster_inter[0] = transSequence_cluster[clusterID][2][id4loop];
-							transSequence_cluster_inter[1] = transSequence[1];
-							transSequence_cluster_inter[2].first  = transSequence_cluster[nextClusterID][2][loopID2].first.inverse();
-							transSequence_cluster_inter[2].second = transSequence_cluster[nextClusterID][2][loopID2].second;
-							transSequence_cluster_inter[3].first  = transSequence[0].first.inverse();
-							transSequence_cluster_inter[3].second = transSequence[0].second;
-
-							retuValue = check_single_loop_inter(transSequence_cluster_inter);
-							if(retuValue.first == 1)
-							{
-								consistent_in_next_cluster.first  = nextClusterID;//the cluster id of the next one
-								consistent_in_next_cluster.second.push_back(k);
-								cout<<"displayCov diagnal: "<<endl<<displayCov<<endl;
-								int backdd =0;
-
-								int dsfdd=0;
-							}
-
-						}	
-
-					}
-					if(k == _clustersFound[nextClusterID].consistentGroup.size()-1)
-					{
-						if(consistent_in_next_cluster.second.size() == 0)
-						{
-							int addd = 2;
-							while((i+addd) < (nodessequence2inter_start.size()-2))
-							{
-								// cout<<"i: "<<i<<endl;
-								// cout<<"addd: "<<addd<<endl;
-								// cout<<"i+addd: "<<i+addd<<endl;
-
-								for(int sek =0; sek < nodessequence2inter_start[i+addd].size(); sek++)
-								{
-									cout<<"sek: "<<sek<<endl;
-									nextClusterID = merge_vector[i+addd][0];
-									node_loop2_start = nodessequence2inter_start[i+addd][sek].first;
-									node_loop2_end   = nodessequence2inter_start[i+addd][sek].second;
-									nodes[0] = node_loop1_start;
-									nodes[1] = node_loop1_end;
-									nodes[2] = node_loop2_start;
-									nodes[3] = node_loop2_end;
-
-									cal_odo_seg(nodes, transSequence);
-
-									int loopID2 = _clustersFound[nextClusterID].consistentGroup[sek][0].first;
-									transSequence_cluster_inter[1] = transSequence[1];
-									transSequence_cluster_inter[2].first  = transSequence_cluster[nextClusterID][2][loopID2].first.inverse();
-									transSequence_cluster_inter[2].second = transSequence_cluster[nextClusterID][2][loopID2].second;
-									transSequence_cluster_inter[3].first  = transSequence[0].first.inverse();
-									transSequence_cluster_inter[3].second = transSequence[0].second;
-
-									retuValue = check_single_loop_inter(transSequence_cluster_inter);
-
-									if(retuValue.first == 1)
-									{
-										consistent_in_next_cluster.first  = nextClusterID;//the cluster id of the next one
-										consistent_in_next_cluster.second.push_back(sek);// = k;
-										addd = nodessequence2inter_start.size();
-										cout<<"displayCov diagnal: "<<endl<<displayCov<<endl;
-
-										break;
-									}
-									else if(retuValue.second <= 30)
-									{
-								
-										if(_clustersFound[clusterID].consistentGroup[j].size() > 1)
-										{
-											int size    =   _clustersFound[clusterID].consistentGroup[j].size() - 2;
-											int id4loop =  _clustersFound[clusterID].consistentGroup[j][size].first;
-
-											nodes[0] = _clustersFound[clusterID].positionserial[id4loop][0];
-											nodes[1] = _clustersFound[clusterID].positionserial[id4loop][3];
-											cal_odo_seg(nodes, transSequence);
-
-											transSequence_cluster_inter[0] = transSequence_cluster[clusterID][2][id4loop];
-											transSequence_cluster_inter[1] = transSequence[1];
-											transSequence_cluster_inter[2].first  = transSequence_cluster[nextClusterID][2][loopID2].first.inverse();
-											transSequence_cluster_inter[2].second = transSequence_cluster[nextClusterID][2][loopID2].second;
-											transSequence_cluster_inter[3].first  = transSequence[0].first.inverse();
-											transSequence_cluster_inter[3].second = transSequence[0].second;
-
-											retuValue = check_single_loop_inter(transSequence_cluster_inter);
-											if(retuValue.first == 1)
-											{
-												consistent_in_next_cluster.first  = nextClusterID;//the cluster id of the next one
-												consistent_in_next_cluster.second.push_back(sek);
-												addd = nodessequence2inter_start.size();
-												cout<<"displayCov diagnal: "<<endl<<displayCov<<endl;
-												break;
-											}
-
-										}	
-
-									}
-								}
-								addd = addd+1;
-							}
-							cout<<"if has terminate"<<endl;
-						}
-						nextClusterID = merge_vector[i+1][0];
-					}
-
-				}
-				ele_of_final.first = current_culsterID_groupID;
-				ele_of_final.second = consistent_in_next_cluster;
-				final_cons_group.push_back(ele_of_final);
-			}
-			
-			final_cons_group_whole.push_back(final_cons_group);
-			final_cons_group.clear();
-		}
-
-		//code to propose the lase cluster
-
-		std::vector<std::pair<int,int> > breakupCluster;
-		for(int i = 0; i < final_cons_group_whole.size(); i++)
-		{
-			for(int j = 0; j < final_cons_group_whole[i].size(); j++)
-			{
-
-				if(final_cons_group_whole[i][j].second.second.size() == 0)
-					breakupCluster.push_back(final_cons_group_whole[i][j].first );
-				cout<<" cluster["<<final_cons_group_whole[i][j].first.first<<"] "<<"group["<<
-					final_cons_group_whole[i][j].first.second<<"] has consistent group: ";
-				for(int k = 0; k < final_cons_group_whole[i][j].second.second.size(); k++)
-					cout<<final_cons_group_whole[i][j].second.second[k]<<" ";
-				cout<<" in cluster["<<final_cons_group_whole[i][j].second.first<<"]"<<endl;
-				cout<<" "<<endl;
-			}
-		}
-
-		for(int i = 0; i < breakupCluster.size(); i++)
-		{
-			cout<<" cluster["<<breakupCluster[i].first<<"] "<<"group["<<
-					breakupCluster[i].second<<"] has no  group"<<endl;
-		}
-
-		for(int i = 0; i < breakupCluster.size(); i++)
-		{
-			int cluster_lo = breakupCluster[i].first;
-			int group   = breakupCluster[i].second;
-			int j;
-			for(j = 0; j< 30; j++)
-			{
-				if(merge_vector[j][0] == cluster_lo)
-					break;
-				if(j == merge_vector.size()-1)
-				{
-					printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-					exit(0);
-				}
-			}
-		}
-
+		
 	}
 
-
-
-	// nodes store the starts and ends node of the two loops, [loop1_start, loop1_end, loop2_start, loop2_end]
-	// transSequence returns the gransform and the covariance of the two segments of odometry edges
-	void cal_odo_seg(std::array<int,4> &nodes, std::array<std::pair<g2o::SE2, Matrix3d>, 2 > &transSequence)
-	{
-		g2o::SE2 edge1, edge2, edge0;
-		g2o::Vector3 mid_vector3;
-		std::pair<int, int> seg_pair;
-		std::pair<g2o::SE2, Matrix3d> transSeg;
-		Matrix3d m = Matrix3d::Identity(),m_m = Matrix3d::Identity();  
-		bool sequence_first_2_second;
-		int from, to;
-		std::array<double, 8> odometryedge_1, odometryedge_2;
-		std::array<double, 6> loop_edge;
-		int seri = 0;
-				
-				for(int i = 0; i < 2; i++)
-				{
-					if(i == 0)
-					{
-						seg_pair.first = nodes[0];
-						seg_pair.second = nodes[2];
-					}
-					else
-					{
-						seg_pair.first = nodes[1];
-						seg_pair.second = nodes[3];
-					}
-
-					if(seg_pair.first < seg_pair.second)
-					{
-						sequence_first_2_second = 1;
-						from = seg_pair.first;
-						to = seg_pair.second;
-					}
-					else
-					{
-						sequence_first_2_second = 0;
-						from = seg_pair.second ;
-						to = seg_pair.first;
-					}
-					int odo_size = to - from;
-					if(odo_size < 1)// if the adjacent nodes are the same one, set the transfrom matrix to zero and covariance  to zero
-					{
-						m = Matrix3d::Identity(); 
-						mid_vector3[0] = 0;mid_vector3[1] = 0;mid_vector3[2] = 0;
-						edge0.fromVector(mid_vector3);
-						m(0,0)= 0; m(1,1)= 0; m(2,2) = 0;
-						if(sequence_first_2_second == 0)
-							transSeg.first = edge0.inverse();
-						else
-							transSeg.first = edge0;
-						transSeg.second = m;
-						transSequence[seri] = transSeg;
-						seri++;
-						// cout<<"to: "<<to<<endl;
-						// cout<<"from: "<<from<<endl;
-					 //    printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-						// exit(0);		
-					}
-					else if(odo_size == 1)
-					{
-						m = Matrix3d::Identity(); 
-						mid_vector3[0] = OdoInf[from][2];mid_vector3[1] = OdoInf[from][3];mid_vector3[2] = OdoInf[from][4];
-						edge0.fromVector(mid_vector3);
-						m(0,0)= 1.0/OdoInf[from][5]; m(1,1)= 1.0/OdoInf[from][6]; m(2,2) = 1.0/OdoInf[from][7];
-						if(sequence_first_2_second == 0)
-							transSeg.first = edge0.inverse();
-						else
-							transSeg.first = edge0;
-						transSeg.second = m;
-						transSequence[seri] = transSeg;
-						seri++;
-					}
-					else
-					{
-						Matrix3d m1 = Matrix3d::Identity(),  m2 = Matrix3d::Identity(), m_m, J1, J2;
-						m1(0,0 )= 1.0/OdoInf[from][5]; m1(1,1)= 1.0/OdoInf[from][6]; m1(2,2) = 1.0/OdoInf[from][7];
-						mid_vector3[0] = OdoInf[from][2];mid_vector3[1] = OdoInf[from][3];mid_vector3[2] = OdoInf[from][4];
-						edge1.fromVector(mid_vector3);
-
-						for(int j=from+1; j<to; j++)
-						{
-							m2(0,0 ) = 1.0/OdoInf[j][5]; m2(1,1) = 1.0/OdoInf[j][6]; m2(2,2) = 1.0/OdoInf[j][7];
-							mid_vector3[0] = OdoInf[j][2]; mid_vector3[1] = OdoInf[j][3]; mid_vector3[2] = OdoInf[j][4];
-							edge2.fromVector(mid_vector3);
-
-							Jacobian_4_edge_propagate(edge1, edge2, J1, J2);
-							covariance_propagate(m1, m2, J1, J2, m_m);
-							m1 = m_m;
-
-							edge1 *= edge2;//update transform
-						}
-						if(sequence_first_2_second == 0)
-							transSeg.first = edge1.inverse();
-						else
-							transSeg.first = edge1;
-						transSeg.second = m1;
-						transSequence[seri] = transSeg;
-						seri++;
-						// cout<<seg_pair.first<<" "<<seg_pair.second<<endl;
-						// cout<<m1<<endl;
-		     		}
-				}
-	}
 
 	IntPairSet& getClusterByID(int id){
 		return clusterIDtoLoopsMap[id];
@@ -2533,117 +1198,8 @@ public:
 	}
 	void merge_cluster(std::vector<std::vector<int> > & consistent_pair_clusterr_real)
 	{
-		merge_vector.clear();
-		std:vector<int > ele_merge_cluster;
-		ele_merge_cluster.clear();
-		bool newclu = 0;
-
-		for(int i =0; i < consistent_pair_clusterr_real.size(); i++)
-		{
-			if(i == consistent_pair_clusterr_real.size()-1)
-			{
-				if(merge_vector.back().back() == i)
-					break;
-				else
-				{
-					ele_merge_cluster.clear();
-					ele_merge_cluster.push_back(i);
-					merge_vector.push_back(ele_merge_cluster);
-					break;
-				}
-			}
-			if(consistent_pair_clusterr_real[i].size() != 0)
-			{
-				vector<int>::iterator iter=find(consistent_pair_clusterr_real[i].begin(),consistent_pair_clusterr_real[i].end(),i+1);  
-					      
-				//delete i 
-				if(iter!=consistent_pair_clusterr_real[i].end())
-				{
-					if(consistent_pair_clusterr_real[i+1].size() != 0)
-					{
-						vector<int>::iterator iter22=find(consistent_pair_clusterr_real[i+1].begin(),consistent_pair_clusterr_real[i+1].end(),i);  
-						if(iter22 != consistent_pair_clusterr_real[i+1].end())
-							newclu = 0;
-						else
-							newclu = 1;
-					}
-					else
-						newclu = 1;
-				}
-				else
-					newclu = 1;
-			}
-			else
-				newclu = 1;
-			if(newclu == 1)
-			{
-				ele_merge_cluster.push_back(i);
-				merge_vector.push_back(ele_merge_cluster);
-				ele_merge_cluster.clear();
-			}
-			else
-				ele_merge_cluster.push_back(i);
-
-		}
-		int j = 0;
-		for(int i = 0; i < merge_vector.size(); i++)
-		{
-			j = j + merge_vector[i].size();
-			for(int k = 0; k<merge_vector[i].size(); k++)
-				cout<<merge_vector[i][k]<<" ";
-			cout<<" "<<endl;
-
-		}
-		if(j != consistent_pair_clusterr_real.size())
-		{
-			printf("This error is in %s on line %d\n",  __FILE__, __LINE__);
-			exit(0);
-		}
-
-		for(int i = 0; i < merge_vector.size(); i++)
-		{
-			if(merge_vector[i].size() > 1)
-			{
-				for(int j = 1; j< merge_vector[i].size(); j++)
-				{
-					killed_cluster.push_back(merge_vector[i][j]);
-					vector<int>::iterator iter=find(killed_cluster.begin(),killed_cluster.end(),i);
-		
-					_clustersFound[merge_vector[i][0]].positionserial.insert(_clustersFound[merge_vector[i][0]].positionserial.end(),
-						_clustersFound[merge_vector[i][j]].positionserial.begin(),_clustersFound[merge_vector[i][j]].positionserial.end());
-					_clustersFound[merge_vector[i][j]].positionserial.clear();
-		
-
-					clusterIDtoLoopsMap[merge_vector[i][0]].insert(clusterIDtoLoopsMap[merge_vector[i][j]].begin(), clusterIDtoLoopsMap[merge_vector[i][j]].end());
-
-					clusterIDtoLoopsMap.erase(merge_vector[i][j]);
-
-					for(IntPairIDMap::iterator it= loopToClusterIDMap.begin();
-						it!=loopToClusterIDMap.end(); it++)
-						{
-							if(it->second == merge_vector[i][j])
-							{
-								std::pair<int,int> loop = it->first;
-								loopToClusterIDMap.erase(it->first);
-								loopToClusterIDMap[loop] = merge_vector[i][0];
-							}
-
-						}
-
-				}
-
-			}
-
-			for(int k = 0; k<merge_vector[i].size(); k++)
-				cout<<merge_vector[i][k]<<" ";
-			cout<<" "<<endl;
-
-		}
-
-
 	}
-
-
+		
 };
 
 #endif /* CLUSTER_HPP_ */
